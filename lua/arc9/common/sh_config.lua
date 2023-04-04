@@ -1,3 +1,5 @@
 // So servers don't have to mess with ConVars
 
-ARC9.NoHUD = false
+-- !CRIMSON_MODIFY!
+ARC9.NoHUD = true
+-- !CRIMSON_MODIFY_END!

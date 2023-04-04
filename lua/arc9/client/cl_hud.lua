@@ -51,6 +51,9 @@ ARC9.Colors = {
 }
 
 function ARC9.ShouldDrawHUD()
+    -- !CRIMSON_MODIFY!
+    if true then return end
+    -- !CRIMSON_MODIFY_END!
     if !GetConVar("cl_drawhud"):GetBool() then return end
 
     local wpn = LocalPlayer():GetActiveWeapon()

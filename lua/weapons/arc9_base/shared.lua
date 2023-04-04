@@ -214,15 +214,17 @@ SWEP.StomachDamage = 1
 SWEP.ArmDamage = 1
 SWEP.LegDamage = 1
 
+-- !CRIMSON_MODIFY!
 SWEP.BodyDamageMults = {
     [HITGROUP_HEAD] = 2.5,
     [HITGROUP_CHEST] = 1.25,
     [HITGROUP_STOMACH] = 1,
-    [HITGROUP_LEFTARM] = 1,
-    [HITGROUP_RIGHTARM] = 1,
-    [HITGROUP_LEFTLEG] = 0.9,
-    [HITGROUP_RIGHTLEG] = 0.9,
+    [HITGROUP_LEFTARM] = 0.5,
+    [HITGROUP_RIGHTARM] = 0.5,
+    [HITGROUP_LEFTLEG] = 0.5,
+    [HITGROUP_RIGHTLEG] = 0.5,
 }
+-- !CRIMSON_MODIFY_END!
 
 -- Set the multiplier for each part of the body.
 -- If a limb is not set the damage multiplier will default to 1
@@ -544,8 +546,10 @@ SWEP.SprintToFireTime = 0.25 -- How long it takes to go from sprinting to being 
 
 SWEP.NoSprintWhenLocked = false -- You cannot sprint while reloading with this gun
 
-SWEP.ReloadTime = 1
-SWEP.DeployTime = 1
+-- !CRIMSON_MODIFY!
+SWEP.ReloadTime = 1.5
+SWEP.DeployTime = 1.5
+-- !CRIMSON_MODIFY_END!
 SWEP.CycleTime = 1
 SWEP.FixTime = 1
 SWEP.OverheatTime = 1

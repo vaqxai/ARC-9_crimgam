@@ -1,6 +1,9 @@
 -- third person inverse kinematics
 
 function SWEP:ShouldTPIK()
+    -- !CRIMSON_MODIFY!
+    if true then return end
+    -- !CRIMSON_MODIFY_END!
     if self.NoTPIK then return end
     local owner = self:GetOwner()
     local lp = LocalPlayer()
