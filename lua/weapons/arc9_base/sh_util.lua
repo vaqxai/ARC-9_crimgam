@@ -52,9 +52,10 @@ function SWEP:GetWM()
 end
 
 function SWEP:GetVM()
-    if !IsValid(self:GetOwner()) then return nil end
-    if !self:GetOwner():IsPlayer() then return nil end
-    return self:GetOwner():GetViewModel()
+    local owner = self:GetOwner()
+    if !IsValid(owner) then return nil end
+    if !owner:IsPlayer() then return nil end
+    return owner:GetViewModel()
 end
 
 function SWEP:Curve(x)
@@ -165,6 +166,9 @@ function SWEP:RotateAroundPoint2(pos, ang, point, offset, offset_ang)
     return mat:GetTranslation(), mat:GetAngles()
 end
 
+function SWEP:IsUsingRTScope()
+    return self:GetSightAmount() > 0.5 and self:GetSight() and self:GetSight().atttbl and self:GetSight().atttbl.RTScope
+end
 
 if CLIENT then
 

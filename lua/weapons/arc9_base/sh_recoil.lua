@@ -9,7 +9,7 @@ local isSingleplayer = game.SinglePlayer()
 function SWEP:GetRecoilPatternDirection(shot)
     local dir = 0
 
-    local seed = self:GetProcessedValue("RecoilSeed") or self:GetClass()
+    local seed = self:GetProcessedValue("RecoilSeed", true) or self:GetClass()
 
     if isstring(seed) then
         local numseed = 0
@@ -25,8 +25,8 @@ function SWEP:GetRecoilPatternDirection(shot)
 
     seed = seed + shot
 
-    if self:GetProcessedValue("RecoilLookupTable") then
-        dir = self:PatternWithRunOff(self:GetProcessedValue("RecoilLookupTable"), self:GetProcessedValue("RecoilLookupTableOverrun") or self:GetProcessedValue("RecoilLookupTable"), shot)
+    if self:GetProcessedValue("RecoilLookupTable", true) then
+        dir = self:PatternWithRunOff(self:GetProcessedValue("RecoilLookupTable", true), self:GetProcessedValue("RecoilLookupTableOverrun", true) or self:GetProcessedValue("RecoilLookupTable", true), shot)
     else
         if self.RecoilPatternCache[shot] then
             dir = self.RecoilPatternCache[shot]
@@ -84,8 +84,10 @@ function SWEP:ApplyRecoil()
     recoilup = recoilup + randomrecoilup
     recoilside = recoilside + randomrecoilside
 
-    recoilup = recoilup * (self:GetProcessedValue("Recoil") or 0)
-    recoilside = recoilside * (self:GetProcessedValue("Recoil") or 0)
+    local pvrec = self:GetProcessedValue("Recoil")
+
+    recoilup = recoilup * (pvrec or 0)
+    recoilside = recoilside * (pvrec or 0)
 
     self:SetRecoilUp(recoilup)
     self:SetRecoilSide(recoilside)
@@ -97,8 +99,10 @@ function SWEP:ApplyRecoil()
 
     local pbf = self:GetProcessedValue("PushBackForce")
 
+    local owner = self:GetOwner()
+
     if pbf != 0 then
-        self:GetOwner():SetVelocity(self:GetShootDir():Forward() * -pbf)
+        owner:SetVelocity(self:GetShootDir():Forward() * -pbf)
     end
 
     local vis_kick = self:GetProcessedValue("RecoilKick")
@@ -111,10 +115,10 @@ function SWEP:ApplyRecoil()
     local vis_kick_h = vis_kick * util.SharedRandom("ARC9_vis_kick_h", -1, 1)
     vis_shake = vis_shake * util.SharedRandom("ARC9_vis_kick_shake", -1, 1)
 
-    -- self:GetOwner():SetViewPunchAngles(Angle(vis_kick_v, vis_kick_h, vis_shake))
+    -- owner:SetViewPunchAngles(Angle(vis_kick_v, vis_kick_h, vis_shake))
 
-    self:GetOwner():SetFOV(self:GetOwner():GetFOV() * 0.99, 0)
-    self:GetOwner():SetFOV(0, 60 / (self:GetProcessedValue("RPM")))
+    owner:SetFOV(owner:GetFOV() * 0.99, 0)
+    owner:SetFOV(0, 60 / (self:GetProcessedValue("RPM")))
 end
 
 -- local function lensqr(ang)
@@ -353,43 +357,48 @@ do
     local weaponGetNextPrimaryFire = FindMetaTable("Weapon").GetNextPrimaryFire
     local swepThinkVisualRecoil = SWEP.ThinkVisualRecoil
 
+    local smolnumber = 1e-5
+
     function SWEP:ThinkRecoil()
+        local ru = self.dt.RecoilUp
+        local rs = self.dt.RecoilSide
+
+        if math.abs(ru) < smolnumber and math.abs(rs) < smolnumber and self.dt.RecoilAmount == 0 then return end
+
         swepGetProcessedValue = swepGetProcessedValue or self.GetProcessedValue
 
         local rdr = swepGetProcessedValue(self, "RecoilDissipationRate")
+        local ct = CurTime()
+        local ft = FrameTime()
 
-        if (weaponGetNextPrimaryFire(self) + swepGetProcessedValue(self, "RecoilResetTime")) < CurTime() then
+        if (weaponGetNextPrimaryFire(self) + swepGetProcessedValue(self, "RecoilResetTime")) < ct then
             -- as soon as dissipation kicks in, recoil is clamped to the modifer cap; this is to not break visual recoil
-            self:SetRecoilAmount(math.Clamp(self.dt.RecoilAmount - (FrameTime() * rdr), 0, swepGetProcessedValue(self, "UseVisualRecoil") and math.huge or swepGetProcessedValue(self, "RecoilModifierCap")))
-            if weaponGetNextPrimaryFire(self) + swepGetProcessedValue(self, "RecoilFullResetTime") < CurTime() then
+            self:SetRecoilAmount(math.Clamp(self.dt.RecoilAmount - (ft * rdr), 0, swepGetProcessedValue(self, "UseVisualRecoil", true) and math.huge or swepGetProcessedValue(self, "RecoilModifierCap")))
+            if weaponGetNextPrimaryFire(self) + swepGetProcessedValue(self, "RecoilFullResetTime") < ct then
                 self:SetRecoilAmount(0)
             end
             -- print(math.Round(rec))
         end
 
-        local ru = self.dt.RecoilUp
-        local rs = self.dt.RecoilSide
-
-        local m = 10
-
-        if math.abs(ru) > 1e-5 or math.abs(rs) > 1e-5 then
-            local new_ru = ru - (FrameTime() * ru * m)
-            local new_rs = rs - (FrameTime() * rs * m)
+        if math.abs(ru) > smolnumber or math.abs(rs) > smolnumber then
+            local new_ru = ru - (ft * ru * 10)
+            local new_rs = rs - (ft * rs * 10)
 
             self:SetRecoilUp(new_ru)
             self:SetRecoilSide(new_rs)
         end
 
-        if game.SinglePlayer() or IsFirstTimePredicted() then
+        if isSingleplayer or IsFirstTimePredicted() then
             swepThinkVisualRecoil(self)
         end
     end
 end
 
 local lastrft = 0
+local realrecoilconvar = GetConVar("arc9_realrecoil")
 
 function SWEP:DoVisualRecoil()
-    if !self:GetProcessedValue("UseVisualRecoil") then return end
+    if !self:GetProcessedValue("UseVisualRecoil", true) then return end
 
     if isSingleplayer then self:CallOnClient("DoVisualRecoil") end
 
@@ -398,9 +407,9 @@ function SWEP:DoVisualRecoil()
 
         local up = self:GetProcessedValue("VisualRecoilUp") * mult
 
-        if self:GetProcessedValue("RecoilLookupTable") then
-            local dir = self:PatternWithRunOff(self:GetProcessedValue("RecoilLookupTable"), self:GetProcessedValue("RecoilLookupTableOverrun") or self:GetProcessedValue("RecoilLookupTable"), math.floor(self:GetRecoilAmount()) + 1)
-            up = self:GetProcessedValue("VisualRecoilUp") * mult * self:GetRecoilUp() * -20 * (math.sin(math.rad(dir-90)) * -1)
+        if self:GetProcessedValue("RecoilLookupTable", true) then
+            local dir = self:PatternWithRunOff(self:GetProcessedValue("RecoilLookupTable", true), self:GetProcessedValue("RecoilLookupTableOverrun", true) or self:GetProcessedValue("RecoilLookupTable", true), math.floor(self:GetRecoilAmount()) + 1)
+            up = up * self:GetRecoilUp() * -20 * (math.sin(math.rad(dir-90)) * -1)
         end
 
         local side = self:GetProcessedValue("VisualRecoilSide") * mult * self:GetRecoilSide()
@@ -413,11 +422,11 @@ function SWEP:DoVisualRecoil()
 
         local fake = 0
 
-        fake = self:GetProcessedValue("VisualRecoilPositionBump") or 1.5
+        fake = self:GetProcessedValue("VisualRecoilPositionBump", true) or 1.5
 
         local isRTscoped = CLIENT and self:GetSight() and self:GetSight().atttbl and self:GetSight().atttbl.RTScope -- horible
 
-        local bumpup = (isRTscoped and self:GetProcessedValue("VisualRecoilPositionBumpUpRTScope") or self:GetProcessedValue("VisualRecoilPositionBumpUp")) or 0.08
+        local bumpup = (isRTscoped and self:GetProcessedValue("VisualRecoilPositionBumpUpRTScope", true) or self:GetProcessedValue("VisualRecoilPositionBumpUp", true)) or 0.08
 
         fake = Lerp(self:GetSightDelta(), fake, 1)
 
@@ -426,7 +435,7 @@ function SWEP:DoVisualRecoil()
             local awfulnumber = (220 - math.Clamp(1/midrft, 60, 220))
             awfulnumber = math.Clamp(awfulnumber * awfulnumber * awfulnumber * 0.00000035 + 0.7, 0.5, 2.15) -- Cubic
 
-            if !game.SinglePlayer() then awfulnumber = 1.2 end
+            if !isSingleplayer then awfulnumber = 1.2 end
 
             fake = fake * awfulnumber
 
@@ -446,7 +455,7 @@ function SWEP:DoVisualRecoil()
                 -- if we ever will get LUT interpolation (for dmg on ranges LUT etc) add it here too
         end
 
-        if GetConVar("arc9_realrecoil"):GetBool() then
+        if realrecoilconvar:GetBool() then
             self:SetVisualRecoilAng(self:GetVisualRecoilAng() + Angle(up, side * 15, roll))
             self:SetVisualRecoilPos(self:GetVisualRecoilPos() - ((Vector(0, punch, up * bumpup) * fake) - Vector(side, 0, 0)))
         end
@@ -463,8 +472,8 @@ end
 function SWEP:GetViewModelRecoil(pos, ang, correct)
     correct = correct or 1
     if !isSingleplayer and SERVER then return end
-    if !self:GetProcessedValue("UseVisualRecoil") then return pos, ang end
-    local vrc = self:GetProcessedValue("VisualRecoilCenter")
+    if !self:GetProcessedValue("UseVisualRecoil", true) then return pos, ang end
+    local vrc = self:GetProcessedValue("VisualRecoilCenter", true)
 
     local vra = Angle(self.VisualRecoilAng)
 
@@ -473,20 +482,21 @@ function SWEP:GetViewModelRecoil(pos, ang, correct)
     pos, ang = self:RotateAroundPoint(pos, ang, vrc, self.VisualRecoilPos, vra * correct)
 
     if ARC9.Dev(2) then
-        debugoverlay.Axis(self:GetVM():LocalToWorld(self:GetProcessedValue("VisualRecoilCenter")), ang, 2, 0.1, true)
+        debugoverlay.Axis(self:GetVM():LocalToWorld(self:GetProcessedValue("VisualRecoilCenter", true)), ang, 2, 0.1, true)
     end
 
     return pos, ang
 end
 
+
 function SWEP:GetRecoilOffset(pos, ang)
-    if !GetConVar("arc9_realrecoil"):GetBool() then return pos, ang end
-    if !self:GetProcessedValue("UseVisualRecoil") then return pos, ang end
+    if !realrecoilconvar:GetBool() then return pos, ang end
+    if !self:GetProcessedValue("UseVisualRecoil", true) then return pos, ang end
 
     local vrp = self:GetVisualRecoilPos()
     local vra = self:GetVisualRecoilAng()
 
-    local vrc = self:GetProcessedValue("VisualRecoilCenter")
+    local vrc = self:GetProcessedValue("VisualRecoilCenter", true)
 
     pos, ang = self:RotateAroundPoint2(pos, ang, vrc, vrp, vra)
 

@@ -3,6 +3,8 @@ SWEP.FinishFiremodeAnimTime = 0
 function SWEP:SwitchFiremode()
     if self:StillWaiting() then return end
 
+    if self:GetProcessedValue("NoFiremodeWhenEmpty", true) and self:Clip1() <= 0 then return end
+
     if self:GetSafe() then
         self:ToggleSafety(false)
         return
@@ -10,7 +12,9 @@ function SWEP:SwitchFiremode()
 
     if self:GetUBGL() then return end
 
-    if #self:GetValue("Firemodes") < 2 then return end
+    local fmodes = self:GetValue("Firemodes")
+
+    if #fmodes < 2 then return end
 
     local fm = self:GetFiremode()
 
@@ -18,14 +22,14 @@ function SWEP:SwitchFiremode()
 
     fm = fm + 1
 
-    if fm > #self:GetValue("Firemodes") then
+    if fm > #fmodes then
         fm = 1
     end
 
     if IsFirstTimePredicted() then
         local soundtab1 = {
             name = "firemode",
-            sound = self:RandomChoice(self:GetProcessedValue("FiremodeSound")),
+            sound = self:RandomChoice(self:GetProcessedValue("FiremodeSound", true)),
             channel = ARC9.CHAN_FIDDLE
         }
         self:PlayTranslatedSound(soundtab1)
@@ -75,10 +79,12 @@ function SWEP:SetFiremodePose(wm)
 
     pp = self:RunHook("HookP_ModifyFiremodePoseParam", pp) or pp
 
-    if self:GetFinishFiremodeAnimTime() < CurTime() then
-        vm:SetPoseParameter("firemode", pp)
-    else
-        vm:SetPoseParameter("firemode", 1)
+    if self.HasFiremodePoseparam then
+        if self:GetFinishFiremodeAnimTime() < CurTime() then
+            vm:SetPoseParameter("firemode", pp)
+        else
+            vm:SetPoseParameter("firemode", 1)
+        end
     end
 end
 
@@ -118,7 +124,7 @@ function SWEP:ToggleSafety(onoff)
         if IsFirstTimePredicted() then
             local soundtab1 = {
                 name = "safety",
-                sound = self:RandomChoice(self:GetProcessedValue("FiremodeSound")),
+                sound = self:RandomChoice(self:GetProcessedValue("FiremodeSound", true)),
                 channel = ARC9.CHAN_FIDDLE
             }
             self:PlayTranslatedSound(soundtab1)

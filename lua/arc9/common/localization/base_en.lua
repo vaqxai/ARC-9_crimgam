@@ -730,3 +730,21 @@ L["settings.developer.cache"] = "Cache"
 
 L["settings.gameplay.togglepeek_reset.title"] = "Reset Peek State After Aiming"
 L["settings.gameplay.togglepeek_reset.desc"] = "(Only if Toggle Peek is on)\nPeek state will not be retained when exiting aim down sights."
+
+
+-- april 7
+
+L["settings.mod_malfunction.title"] = "Malfunction Chance"
+
+
+-- may 17
+L["settings.attachments.blacklist.title"] = "Blacklist Menu"
+L["settings.attachments.blacklist.open"] = "Open"
+
+L["blacklist.title"] = "ARC9 Attachment Blacklist"
+L["blacklist.desc"] = "Attachments checked here will be blocked from use"
+L["blacklist.blisted"] = "BLACKLISTED"
+L["blacklist.all"] = "ALL"
+L["blacklist.id"] = "ID"
+L["blacklist.name"] = "NAME"
+L["blacklist.filter"] = "FILTER"

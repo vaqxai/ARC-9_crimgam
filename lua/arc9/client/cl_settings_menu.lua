@@ -23,7 +23,7 @@
 
 ARC9.LanguagesTable = {}
 
-local settingstable = {
+ARC9.SettingsTable = {
     -- {
     --     TabName = "Tab name 1",
     --     { type = "label", text = "Header" },
@@ -251,6 +251,9 @@ local settingstable = {
         { type = "slider", text = "settings.attachments.atts_max.title", convar = "atts_max", min = 0, max = 250, decimals = 0, desc = "settings.attachments.atts_max.desc"},
         { type = "bool", text = "settings.attachments.autosave.title", convar = "autosave", desc = "settings.attachments.autosave.desc"},
         -- { type = "bool", text = "Total Anarchy", convar = "atts_anarchy", desc = "Allows any attachment to be attached to any slot.\nVERY laggy.\nWill not work properly with 99% of weapons and attachments.\nPlease don't turn this on.\n\nThis is a server variable."},
+        { sv = true, type = "button", text = "settings.attachments.blacklist.title", content = "settings.attachments.blacklist.open", func = function(self2)
+            RunConsoleCommand("arc9_blacklist")
+        end},
         { sv = true, type = "label", text = "settings.attachments.inventory"},
         { sv = true, type = "bool", text = "settings.attachments.free_atts.title", convar = "free_atts", desc = "settings.attachments.free_atts.desc"},
         { sv = true, type = "bool", text = "settings.attachments.atts_lock.title", convar = "atts_lock", desc = "settings.attachments.atts_lock.desc"},
@@ -271,6 +274,7 @@ local settingstable = {
         { type = "slider", min = 0, max = 10, decimals = 1, text = "settings.mod_muzzlevelocity.title", convar = "mod_muzzlevelocity" },
         { type = "slider", min = 0, max = 10, decimals = 1, text = "settings.mod_rpm.title", convar = "mod_rpm" },
         { type = "slider", min = 0, max = 10, decimals = 1, text = "settings.mod_headshotdamage.title", convar = "mod_headshotdamage" },
+        { type = "slider", min = 0, max = 100, decimals = 1, text = "settings.mod_malfunction.title", convar = "mod_malfunction" },
         -- { type = "slider", text = "Damage", convar = "wawa", min = 0, max = 10, decimals = 0, desc = "The     Damage\n\nThis is a server variable."},
 
         -- { type = "button", text = "Advanced modifiers", content = "Open panel", func = function(self2)
@@ -354,6 +358,8 @@ local settingstable = {
 
 local ARC9ScreenScale = ARC9.ScreenScale
 -- local mat_icon = Material("arc9/arc9_logo_ui.png", "mips smooth")
+local arc9logo_layer1 = Material("arc9/logo/logo_bottom.png", "mips smooth")
+local arc9logo_layer2 = Material("arc9/logo/logo_middle.png", "mips smooth")
 
 local function DrawSettings(bg, page)
     local cornercut = ARC9ScreenScale(3.5)
@@ -368,7 +374,7 @@ local function DrawSettings(bg, page)
     sheet.Navigation:DockMargin(-120, 0, 0, ARC9ScreenScale(5)) -- idk why -120
     sheet.Navigation:SetWidth(ARC9ScreenScale(100))
 
-    for k, v in pairs(settingstable) do
+    for k, v in pairs(ARC9.SettingsTable) do
         if v.sv and !(game.SinglePlayer() or LocalPlayer():IsAdmin()) then continue end -- you don't have the right, oh you don't have the right
 
         local newpanel = vgui.Create("DPanel", sheet)
@@ -542,11 +548,11 @@ local function DrawSettings(bg, page)
             surface.DrawRect(ARC9ScreenScale(3.4), 0, w-ARC9ScreenScale(3.4), h)
 
             surface.SetFont("ARC9_12")
-            local tw = surface.GetTextSize(ARC9:GetPhrase(v.TabName))
+            local tw = surface.GetTextSize(ARC9:GetPhrase(v.TabName) or v.TabName)
 
             surface.SetTextColor(buttontextcolor)
             surface.SetTextPos((w - tw) / 2 + ARC9ScreenScale(1.7), ARC9ScreenScale(3))
-            surface.DrawText(ARC9:GetPhrase(v.TabName))
+            surface.DrawText(ARC9:GetPhrase(v.TabName) or v.TabName)
         end
         buttontalling = buttontalling + ARC9ScreenScale(19+1.7)
     end
@@ -570,7 +576,20 @@ local function DrawSettings(bg, page)
         -- surface.SetMaterial(mat_icon)
         -- surface.DrawTexturedRect(ARC9ScreenScale(4), ARC9ScreenScale(2), ARC9ScreenScale(20), ARC9ScreenScale(20))
 
-        ARC9.DrawColoredARC9Logo(ARC9ScreenScale(4), ARC9ScreenScale(2), ARC9ScreenScale(20), ARC9.GetHUDColor("hi"))
+        -- ARC9.DrawColoredARC9Logo(ARC9ScreenScale(4), ARC9ScreenScale(2), ARC9ScreenScale(20), ARC9.GetHUDColor("hi"))
+        
+        -- function ARC9.DrawColoredARC9Logo(x, y, s, col)
+        do
+            local x, y, s = ARC9ScreenScale(4), ARC9ScreenScale(2), ARC9ScreenScale(20)
+            surface.SetDrawColor(255, 255, 255)
+            surface.SetMaterial(arc9logo_layer1)
+            surface.DrawTexturedRect(x, y, s, s)
+        
+            surface.SetDrawColor(ARC9.GetHUDColor("hi"))
+            surface.SetMaterial(arc9logo_layer2)
+            surface.DrawTexturedRect(x, y, s, s)
+        end
+
 
         surface.SetFont("ARC9_8_Slim")
         surface.SetTextColor(ARC9.GetHUDColor("fg"))
@@ -610,6 +629,7 @@ end
 local hoversound = "arc9/newui/uimouse_hover.ogg"
 local clicksound = "arc9/newui/uimouse_click_return.ogg"
 
+local arc9_hud_darkmode = GetConVar("arc9_hud_darkmode")
 
 function ARC9_OpenSettings(page)
     local bg = vgui.Create("DFrame")
@@ -623,10 +643,8 @@ function ARC9_OpenSettings(page)
     bg:SetBackgroundBlur(true)
     -- bg:MakePopup()
 
-    -- local darkmode = GetConVar("arc9_hud_darkmode"):GetBool()
-
     bg.Paint = function(self2, w, h)
-        if GetConVar("arc9_hud_darkmode"):GetBool() then -- ehh i wanted make it local outside but then it becomes not dynamic
+        if arc9_hud_darkmode:GetBool() then
             surface.SetDrawColor(58, 58, 58, 206)
         else
             surface.SetDrawColor(20, 20, 20, 224)

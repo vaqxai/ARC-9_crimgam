@@ -206,9 +206,9 @@ function SWEP:CreateAttachmentModel(wm, atttbl, slottbl, ignorescale, cm)
         csmodel:SetMaterial(atttbl.ModelMaterial)
     end
 
-    csmodel.CustomCamoTexture = self:GetProcessedValue("CustomCamoTexture")
-    csmodel.CustomCamoScale = self:GetProcessedValue("CustomCamoScale")
-    csmodel.CustomBlendFactor = self:GetProcessedValue("CustomBlendFactor")
+    csmodel.CustomCamoTexture = self:GetProcessedValue("CustomCamoTexture", true)
+    csmodel.CustomCamoScale = self:GetProcessedValue("CustomCamoScale", true)
+    csmodel.CustomBlendFactor = self:GetProcessedValue("CustomBlendFactor", true)
 
     if atttbl.CharmModel then
         local charmmodel = ClientsideModel(atttbl.CharmModel)
@@ -458,14 +458,30 @@ function SWEP:SetupModel(wm, lod, cm)
             csmodel:SetSkin(model.Skin or 1)
             csmodel:SetBodyGroups(model.Bodygroups or "")
 
+            if (ele.MuzzleDevice) then
+                local priority = ele.MuzzleDevice_Priority or 0
+                local totalpriority = self.MuzzleDevice_Priority or 0
+
+                if priority > totalpriority or (priority == totalpriority and i > 0) then
+                    self.MuzzleDevice_Priority = priority
+                    csmodel.IsMuzzleDevice = true
+
+                    if wm then
+                        self.MuzzleDeviceWM = csmodel
+                    else
+                        self.MuzzleDeviceVM = csmodel
+                    end
+                end
+            end
+
             local tbl = {
                 Model = csmodel,
                 Weapon = self
             }
 
-            csmodel.CustomCamoTexture = self:GetProcessedValue("CustomCamoTexture")
-            csmodel.CustomCamoScale = self:GetProcessedValue("CustomCamoScale")
-            csmodel.CustomBlendFactor = self:GetProcessedValue("CustomBlendFactor")
+            csmodel.CustomCamoTexture = self:GetProcessedValue("CustomCamoTexture", true)
+            csmodel.CustomCamoScale = self:GetProcessedValue("CustomCamoScale", true)
+            csmodel.CustomBlendFactor = self:GetProcessedValue("CustomBlendFactor", true)
 
             table.insert(ARC9.CSModelPile, tbl)
 
@@ -480,8 +496,14 @@ function SWEP:SetupModel(wm, lod, cm)
         -- local atttbl = ARC9.GetAttTable(slottbl.Installed)
         local atttbl = self:GetFinalAttTable(slottbl)
 
-        if slottbl.StickerModel and atttbl.StickerMaterial then
-            local stickermodel = ClientsideModel(slottbl.StickerModel)
+        local stickertablepath = slottbl.StickerModel
+
+        if wm then
+            stickertablepath = slottbl.StickerModelWorld or stickertablepath
+        end
+
+        if stickertablepath and atttbl.StickerMaterial then
+            local stickermodel = ClientsideModel(stickertablepath)
 
             if !IsValid(stickermodel) then continue end
 
@@ -531,9 +553,9 @@ function SWEP:SetupModel(wm, lod, cm)
                 csmodel.DrawFunc(self, csmodel, wm)
             end
 
-            csmodel.CustomCamoTexture = self:GetProcessedValue("CustomCamoTexture")
-            csmodel.CustomCamoScale = self:GetProcessedValue("CustomCamoScale")
-            csmodel.CustomBlendFactor = self:GetProcessedValue("CustomBlendFactor")
+            csmodel.CustomCamoTexture = self:GetProcessedValue("CustomCamoTexture", true)
+            csmodel.CustomCamoScale = self:GetProcessedValue("CustomCamoScale", true)
+            csmodel.CustomBlendFactor = self:GetProcessedValue("CustomBlendFactor", true)
 
             local proxmodel
 

@@ -1,5 +1,5 @@
-local defaulttracemat = Material("arc9/laser1")
-local defaultflaremat = Material("arc9/laser_glow", "mips smooth")
+local defaulttracemat = Material("arc9/laser2")
+local defaultflaremat = Material("sprites/light_glow02_add", "mips smooth")
 local lasercolorred = Color(255, 0, 0)
 local lasercolor200 = Color(200, 200, 200)
 
@@ -10,7 +10,7 @@ function SWEP:DrawLaser(pos, dir, atttbl, behav)
     local flaremat = atttbl.LaserFlareMat or defaultflaremat
     local lasermat = atttbl.LaserTraceMat or defaulttracemat
 
-    local dist = 1000
+    local dist = 5000
 
     local tr = util.TraceLine({
         start = pos,
@@ -21,7 +21,7 @@ function SWEP:DrawLaser(pos, dir, atttbl, behav)
 
     if tr.StartSolid then return end
 
-    local width = math.Rand(0.1, 0.2) * strength
+    local width = math.Rand(0.1, 0.5) * strength
 
     local hit = tr.Hit
     local hitpos = tr.HitPos
@@ -38,7 +38,7 @@ function SWEP:DrawLaser(pos, dir, atttbl, behav)
 
     if !behav then
         render.SetMaterial(lasermat)
-        render.DrawBeam(pos, laspos, width * 0.3, 0, fraction, lasercolor200)
+        render.DrawBeam(pos, laspos, width * 0.2, 0, fraction, lasercolor200)
         render.DrawBeam(pos, laspos, width, 0, fraction, color)
     end
 
@@ -82,48 +82,47 @@ function SWEP:DrawLasers(wm, behav)
         local atttbl = self:GetFinalAttTable(slottbl)
 
         if atttbl.Laser then
-            -- if behav then
-            --     self:DrawLaser(EyePos() - (EyeAngles():Up() * 4), self:GetShootDir():Forward(), atttbl)
-            -- else
-                local pos, ang = self:GetAttachmentPos(slottbl, wm, false)
-                model:SetPos(pos)
-                model:SetAngles(ang)
+            local pos, ang = self:GetAttachmentPos(slottbl, wm, false)
+            model:SetPos(pos)
+            model:SetAngles(ang)
 
-                local a
+            local a
 
-                if atttbl.LaserAttachment then
-                    a = model:GetAttachment(atttbl.LaserAttachment)
-                else
-                    a = {
-                        Pos = model:GetPos(),
-                        Ang = model:GetAngles()
-                    }
+            if atttbl.LaserAttachment then
+                a = model:GetAttachment(atttbl.LaserAttachment)
+            else
+                a = {
+                    Pos = model:GetPos(),
+                    Ang = model:GetAngles()
+                }
 
-                    a.Ang:RotateAroundAxis(a.Ang:Up(), -90)
-                end
+                a.Ang:RotateAroundAxis(a.Ang:Up(), -90)
+            end
 
-                if !a then return end
+            if !a then return end
 
-                local lasercorrectionangle = model.LaserCorrectionAngle or Angle(0, 0, 0)
+            local lasercorrectionangle = model.LaserCorrectionAngle
+            local lasang = a.Ang
 
-                local lasang = a.Ang
-
+            if lasercorrectionangle then
                 local up, right, forward = lasang:Up(), lasang:Right(), lasang:Forward()
 
                 lasang:RotateAroundAxis(up, lasercorrectionangle.p)
                 lasang:RotateAroundAxis(right, lasercorrectionangle.y)
                 lasang:RotateAroundAxis(forward, lasercorrectionangle.r)
-
-                if !wm or self:GetOwner() == LocalPlayer() then
-                    if behav then
-                        self:DrawLaser(a.Pos, self:GetShootDir():Forward(), atttbl, behav)
-                    else
-                        self:DrawLaser(a.Pos, -lasang:Right(), atttbl, behav)
-                    end
-                else
+            end
+                
+            self:DrawLightFlare(a.Pos, lasang, atttbl.LaserColor, wm and 5 or 10, slottbl.Address + 69, !wm)
+                
+            if !wm or self:GetOwner() == LocalPlayer() then
+                if behav then
                     self:DrawLaser(a.Pos, self:GetShootDir():Forward(), atttbl, behav)
+                else
+                    self:DrawLaser(a.Pos, -lasang:Right(), atttbl, behav)
                 end
-            -- end
+            else
+                self:DrawLaser(a.Pos, self:GetShootDir():Forward(), atttbl, behav)
+            end
         end
     end
 end

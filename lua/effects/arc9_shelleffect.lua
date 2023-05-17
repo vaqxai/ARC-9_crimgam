@@ -12,6 +12,9 @@ EFFECT.VMContext = true
 
 EFFECT.PCFs = {}
 
+local arc9_eject_time = GetConVar("arc9_eject_time")
+local arc9_eject_fx = GetConVar("arc9_eject_fx")
+
 function EFFECT:Init(data)
 
     local att = data:GetAttachment()
@@ -22,7 +25,6 @@ function EFFECT:Init(data)
 
     if ent:GetOwner() != LocalPlayer() or LocalPlayer():ShouldDrawLocalPlayer() then
         mdl = (ent.WModel or {})[1] or ent
-        att = 2
         self.VMContext = false
     else
         mdl = LocalPlayer():GetViewModel()
@@ -50,19 +52,19 @@ function EFFECT:Init(data)
     -- ang:RotateAroundAxis(ang:Up(), (ent.ShellRotateAngle or Angle(0, 0, 0))[2])
     -- ang:RotateAroundAxis(ang:Forward(), (ent.ShellRotateAngle or Angle(0, 0, 0))[3])
 
-    local model = ent:GetProcessedValue("ShellModel")
-    local material = ent:GetProcessedValue("ShellMaterial")
-    local scale = ent:GetProcessedValue("ShellScale")
-    local physbox = ent:GetProcessedValue("ShellPhysBox")
-    local pitch = ent:GetProcessedValue("ShellPitch")
-    local sounds = ent:GetProcessedValue("ShellSounds")
-    local smoke = ent:GetProcessedValue("ShellSmoke")
-    local velocity = ent:GetProcessedValue("ShellVelocity") or math.Rand(1, 2)
+    local model = ent:GetProcessedValue("ShellModel", true)
+    local material = ent:GetProcessedValue("ShellMaterial", true)
+    local scale = ent:GetProcessedValue("ShellScale", true)
+    local physbox = ent:GetProcessedValue("ShellPhysBox", true)
+    local pitch = ent:GetProcessedValue("ShellPitch", true)
+    local sounds = ent:GetProcessedValue("ShellSounds", true)
+    local smoke = ent:GetProcessedValue("ShellSmoke", true)
+    local velocity = ent:GetProcessedValue("ShellVelocity", true) or math.Rand(1, 2)
 
     local index = data:GetFlags()
 
     if index != 0 then
-        local shelldata = ent:GetProcessedValue("ExtraShellModels")[index]
+        local shelldata = ent:GetProcessedValue("ExtraShellModels", true)[index]
 
         if shelldata then
             model = shelldata.model or model
@@ -79,11 +81,11 @@ function EFFECT:Init(data)
         end
     end
 
-    self.ShellTime = self.ShellTime + GetConVar("arc9_eject_time"):GetFloat()
+    self.ShellTime = self.ShellTime + arc9_eject_time:GetFloat()
 
     local dir = ang:Forward()
 
-    local correctang = ent:GetProcessedValue("ShellCorrectAng") or angle_zero
+    local correctang = ent:GetProcessedValue("ShellCorrectAng", true) or angle_zero
     ang:RotateAroundAxis(ang:Forward(), 90 + correctang.p)
     ang:RotateAroundAxis(ang:Right(), correctang.y)
     ang:RotateAroundAxis(ang:Up(), correctang.r)
@@ -138,7 +140,7 @@ function EFFECT:Init(data)
     phys:AddAngleVelocity(VectorRand() * 100)
     phys:AddAngleVelocity(ang:Up() * 2500 * velocity / 0.75)
 
-    if !GetConVar("arc9_eject_fx"):GetBool() then
+    if !arc9_eject_fx:GetBool() then
         smoke = false
     end
 

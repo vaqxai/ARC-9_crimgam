@@ -71,7 +71,7 @@ function SWEP:Think()
         if swepGetProcessedValue(self, "TriggerDelay") then
             local primedAttack = swepDt.PrimedAttack
             local triggerDelay = swepDt.TriggerDelay
-            local releasetofire = swepGetProcessedValue(self, "TriggerDelayReleaseToFire")
+            local releasetofire = swepGetProcessedValue(self, "TriggerDelayReleaseToFire", true)
 
             if primedAttack and triggerDelay <= now and releasetofire and playerKeyReleased(owner, IN_ATTACK) and shouldRunPredicted then
                 swepPrimaryAttack(self)
@@ -89,7 +89,7 @@ function SWEP:Think()
         end
 
         local currentFiremode = swepGetCurrentFiremode(self)
-        local notRunawayBurst = not swepGetProcessedValue(self, "RunawayBurst")
+        local notRunawayBurst = not swepGetProcessedValue(self, "RunawayBurst", true)
         local postBurstDelay = now + swepGetProcessedValue(self, "PostBurstDelay")
 
         if notPressedAttack then
@@ -134,14 +134,14 @@ function SWEP:Think()
 
             if weaponGetNextPrimaryFire(self) + delay + swepGetProcessedValue(self, "AfterShotParticleDelay") < now then
                 self:SetAfterShot(false)
-                if swepGetProcessedValue(self, "AfterShotParticle") then
-                    local att = swepGetProcessedValue(self, "AfterShotQCA") or swepGetProcessedValue(self, "MuzzleEffectQCA")
+                if swepGetProcessedValue(self, "AfterShotParticle", true) then
+                    local att = swepGetProcessedValue(self, "AfterShotQCA") or swepGetProcessedValue(self, "MuzzleEffectQCA", true)
 
                     local data = EffectData()
                     data:SetEntity(self)
                     data:SetAttachment(att)
 
-                    local effect = swepGetProcessedValue(self, "AfterShotEffect")
+                    local effect = swepGetProcessedValue(self, "AfterShotEffect", true)
 
                     util.Effect(effect, data, true)
                 end
@@ -203,11 +203,15 @@ function SWEP:Think()
         if !self.LoadedPreset then
             self.LoadedPreset = true
 
-            if cvarGetBool(cvarArcAutosave) then
-                swepLoadPreset(self, "autosave")
-            else
-                swepLoadPreset(self, "default")
-            end
+            timer.Simple(0.06, function() -- idk
+                if IsValid(self) then
+                    if cvarGetBool(cvarArcAutosave) then
+                        swepLoadPreset(self, "autosave")
+                    else
+                        swepLoadPreset(self, "default")
+                    end
+                end
+            end)
 
             self:SetReady(false)
             swepDoDeployAnimation(self)

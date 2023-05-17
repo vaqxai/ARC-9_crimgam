@@ -1,5 +1,9 @@
 -- third person inverse kinematics
 
+local arc9_tpik = GetConVar("arc9_tpik")
+local arc9_tpik_others = GetConVar("arc9_tpik_others")
+local arc9_tpik_framerate = GetConVar("arc9_tpik_framerate")
+
 function SWEP:ShouldTPIK()
     -- !CRIMSON_MODIFY!
     if true then return end
@@ -19,11 +23,11 @@ function SWEP:ShouldTPIK()
     -- if self:GetBlindFireAmount() > 0 then return false end
     if lp == owner and !owner:ShouldDrawLocalPlayer() then return end
     if self:RunHook("Hook_BlockTPIK") then return end
-    -- if !GetConVar("arc9_tpik"):GetBool() then return false end
+    -- if !arc9_tpik:GetBool() then return false end
     if lp != owner then
-        return GetConVar("arc9_tpik_others"):GetBool()
+        return arc9_tpik_others:GetBool()
     else
-        return GetConVar("arc9_tpik"):GetBool()
+        return arc9_tpik:GetBool()
     end
     -- return false
 end
@@ -51,7 +55,7 @@ function SWEP:DoTPIK()
     if ply != LocalPlayer() then
         local dist = EyePos():DistToSqr(ply:GetPos())
 
-        local convartpiktime = GetConVar("arc9_tpik_framerate"):GetFloat()
+        local convartpiktime = arc9_tpik_framerate:GetFloat()
         convartpiktime = (convartpiktime == 0) and 250 or math.Clamp(convartpiktime, 5, 250)
         tpikdelay = 1 / convartpiktime
 
@@ -72,7 +76,9 @@ function SWEP:DoTPIK()
 
     local nolefthand = false
 
-    if !self.NotAWeapon and (self:GetHoldType() == "slam" or self:GetHoldType() == "magic" or self:GetHoldType() == "pistol"  or self:GetHoldType() == "normal") then
+    local htype = self:GetHoldType()
+
+    if !self.NotAWeapon and (htype == "slam" or htype == "magic" or htype == "pistol"  or htype == "normal") then
         nolefthand = true
     end
 
@@ -81,6 +87,8 @@ function SWEP:DoTPIK()
     -- local time = IsValid(self:GetVM()) and self:GetVM():GetCycle() or self:GetSequenceCycle()
     local time = self:GetSequenceCycle()
     local seq = self:GetSequenceIndex()
+
+    if self:GetSequenceProxy() != 0 then seq = wm:LookupSequence("idle") end -- lhik ubgls fix
 
     wm:SetSequence(seq)
 
@@ -188,7 +196,7 @@ function SWEP:DoTPIK()
     local ply_r_elbow_matrix = ply:GetBoneMatrix(ply_r_elbow_index)
     local ply_r_hand_matrix = ply:GetBoneMatrix(ply_r_hand_index)
 
-    local limblength = ply:BoneLength(ply_l_elbow_index) + 1
+    local limblength = ply:BoneLength(ply_l_elbow_index)
     if !limblength or limblength == 0 then limblength = 12 end
     
     local r_upperarm_length = limblength 

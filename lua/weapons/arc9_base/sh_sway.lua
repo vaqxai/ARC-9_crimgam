@@ -1,11 +1,18 @@
 SWEP.SetBreathDSP = false
 
+local sfxconvar = GetConVar("arc9_breath_sfx")
+local slomoconvar = GetConVar("arc9_breath_slowmo")
+local togglconvar = GetConVar("arc9_togglebreath")
+local ppconvar = GetConVar("arc9_breath_pp")
+local hudconvar = GetConVar("arc9_breath_hud")
+local swayconvar = GetConVar("arc9_mod_sway")
+
 function SWEP:ThinkHoldBreath()
     if !self:GetOwner():IsPlayer() then return end
     local holdbreathtime = self:GetValue("HoldBreathTime")
     if holdbreathtime <= 0 then return end
 
-    local sfx = GetConVar("arc9_breath_sfx"):GetBool()
+    local sfx = sfxconvar:GetBool()
 
     local target_ts = 1
 
@@ -19,7 +26,7 @@ function SWEP:ThinkHoldBreath()
             if sfx then
                 local soundtab = {
                     name = "breathrunout",
-                    sound = self:RandomChoice(self:GetProcessedValue("BreathRunOutSound")),
+                    sound = self:RandomChoice(self:GetProcessedValue("BreathRunOutSound", true)),
                     channel = ARC9.CHAN_BREATH
                 }
                 
@@ -44,7 +51,7 @@ function SWEP:ThinkHoldBreath()
 
                 local soundtab = {
                     name = "breathin",
-                    sound = self:RandomChoice(self:GetProcessedValue("BreathInSound")),
+                    sound = self:RandomChoice(self:GetProcessedValue("BreathInSound", true)),
                     channel = ARC9.CHAN_BREATH
                 }
 
@@ -58,7 +65,7 @@ function SWEP:ThinkHoldBreath()
             -- self.SetBreathDSP = false
             local soundtab = {
                 name = "breathout",
-                sound = self:RandomChoice(self:GetProcessedValue("BreathOutSound")),
+                sound = self:RandomChoice(self:GetProcessedValue("BreathOutSound", true)),
                 channel = ARC9.CHAN_BREATH
             }
 
@@ -68,14 +75,14 @@ function SWEP:ThinkHoldBreath()
             if CLIENT then self:PlayTranslatedSound(soundtab) end
         end
 
-        self:SetBreath(self:GetBreath() + (FrameTime() * 100 / self:GetProcessedValue("RestoreBreathTime")))
+        self:SetBreath(self:GetBreath() + (FrameTime() * 100 / self:GetProcessedValue("RestoreBreathTime", true)))
         if self:GetBreath() >= 100 then
             self:SetBreath(100)
             self:SetOutOfBreath(false)
         end
     end
 
-    if game.SinglePlayer() and SERVER and GetConVar("arc9_breath_slowmo"):GetBool() then
+    if game.SinglePlayer() and SERVER and slomoconvar:GetBool() then
         local ts = game.GetTimeScale()
 
         ts = math.Approach(ts, target_ts, FrameTime() / ts / 0.5)
@@ -94,15 +101,17 @@ SWEP.IsHoldingBreath = false
 function SWEP:HoldingBreath()
     if self:GetSightAmount() < 0.05 then self.IsHoldingBreath = false return end
 
-    if GetConVar("arc9_togglebreath"):GetBool() then
-        if self:GetOwner():KeyDown(IN_SPEED) and !lastpressed then
+    local ownerkeydownspeed = self:GetOwner():KeyDown(IN_SPEED)
+
+    if togglconvar:GetBool() then
+        if ownerkeydownspeed and !lastpressed then
             self.IsHoldingBreath = !self.IsHoldingBreath
         end
     else
-        self.IsHoldingBreath = self:GetOwner():KeyDown(IN_SPEED)
+        self.IsHoldingBreath = ownerkeydownspeed
     end
 
-    lastpressed = self:GetOwner():KeyDown(IN_SPEED)
+    lastpressed = ownerkeydownspeed
     
     return self:CanHoldBreath() and self.IsHoldingBreath and (self:GetSightAmount() >= 1) and self:GetValue("HoldBreathTime") > 0
 end
@@ -111,7 +120,7 @@ local pp_amount = 0
 
 function SWEP:HoldBreathPP()
     if self:GetValue("HoldBreathTime") <= 0 then return end
-    if !GetConVar("arc9_breath_pp"):GetBool() then return end
+    if !ppconvar:GetBool() then return end
     local amt_d = (100 - self:GetBreath()) / 100
     local holding = self:HoldingBreath()
     local out = self:GetOutOfBreath()
@@ -144,7 +153,7 @@ function SWEP:HoldBreathHUD()
     if self:GetSightAmount() < 1 then return end
     if self:GetValue("HoldBreathTime") <= 0 then return end
 
-    if !GetConVar("arc9_breath_hud"):GetBool() then return end
+    if !hudconvar:GetBool() then return end
 
     local amt = self:GetBreath() / 100
 
@@ -183,7 +192,7 @@ function SWEP:HoldBreathHUD()
 end
 
 function SWEP:GetFreeSwayAmount()
-    if !GetConVar("arc9_mod_sway"):GetBool() then return 0 end
+    if !swayconvar:GetBool() then return 0 end
     if !self:GetOwner():IsPlayer() then return 0 end
     local sway = self:GetProcessedValue("Sway")
 

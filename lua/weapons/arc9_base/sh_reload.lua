@@ -8,7 +8,7 @@ function SWEP:Reload()
     --     return
     -- end
 
-    if self:GetNeedsCycle() then
+    if !self:GetProcessedValue("CanReloadWhileUnCycled", true) and self:GetNeedsCycle() then
         return
     end
 
@@ -38,7 +38,7 @@ function SWEP:Reload()
         ammo = self:Ammo2()
     end
 
-    if !self:GetProcessedValue("BottomlessClip") then
+    if !self:GetProcessedValue("BottomlessClip", true) then
         if clip >= self:GetCapacity(getUBGL) then return end
 
         if !self:GetInfiniteAmmo() and ammo <= 0 then
@@ -91,7 +91,7 @@ function SWEP:Reload()
         end
     end
 
-    if !self:GetProcessedValue("ReloadInSights") then
+    if !self:GetProcessedValue("ReloadInSights", true) then
         self:ExitSights()
     end
 
@@ -127,26 +127,22 @@ function SWEP:Reload()
                     end
 
                     self:SetLoadedRounds(math.min((clip == 0 and self:GetValue("ClipSize") or self:GetCapacity(false)), self:Clip1() + ammo1))
+                    self:SetLastLoadedRounds(self:GetLoadedRounds())
                 end)
             end
         end
     end
 
     if !self:PredictionFilter() then
-        if self:GetProcessedValue("ShouldDropMag") or self:GetProcessedValue("ShouldDropMagEmpty") and clip == 0 then
-            self:SetTimer(self:GetProcessedValue("DropMagazineTime"), function()
+        if self:GetProcessedValue("ShouldDropMag", true) or self:GetProcessedValue("ShouldDropMagEmpty", true) and clip == 0 then
+            self:SetTimer(self:GetProcessedValue("DropMagazineTime", true), function()
                 self:DropMagazine()
             end)
         end
     end
 
-    if self:GetAnimationEntry(self:TranslateAnimation(anim)).DumpAmmo then
-        self:Unload()
-    end
-
     if !self.NoForceSetLoadedRoundsOnReload then -- sorry
         self:SetLoadedRounds(self:Clip1())
-        self:SetLastLoadedRounds(clip)
     end
 
     self:SetReloading(true)
@@ -163,6 +159,8 @@ function SWEP:Reload()
     -- end)
 
     self:SetReloadFinishTime(CurTime() + (t * 0.95))
+
+    self:RunHook("Hook_PostReload")
 end
 
 function SWEP:CanReload()
@@ -175,7 +173,7 @@ function SWEP:CanReload()
         ammo = self:Ammo2()
     end
     if ammo <= 0 and !self:GetInfiniteAmmo() then return end
-    if !self:GetProcessedValue("ReloadWhileSprint") and self:GetSprintAmount() > 0 then
+    if !self:GetProcessedValue("ReloadWhileSprint", true) and self:GetSprintAmount() > 0 then
         return
     end
     if self:GetJammed() then return end
@@ -215,12 +213,12 @@ end
 function SWEP:DropMagazine()
     -- if !IsFirstTimePredicted() and !game.SinglePlayer() then return end
 
-    local mdl = self:GetProcessedValue("DropMagazineModel")
+    local mdl = self:GetProcessedValue("DropMagazineModel", true)
 
     if mdl then
         util.PrecacheModel(mdl) -- garry newman moment
 
-        for i = 1, self:GetProcessedValue("DropMagazineAmount") do
+        for i = 1, self:GetProcessedValue("DropMagazineAmount", true) do
             local drop_qca = self:GetQCAMagdrop()
 
             local data = EffectData()
@@ -254,7 +252,7 @@ function SWEP:TakeAmmo(amt)
     if self:GetUBGL() then
         self:TakeSecondaryAmmo(amt)
     else
-        if self:GetProcessedValue("BottomlessClip") then
+        if self:GetProcessedValue("BottomlessClip", true) then
             if !self:GetInfiniteAmmo() then
                 self:RestoreClip(self:GetValue("ClipSize"))
 
@@ -333,6 +331,7 @@ function SWEP:RestoreClip(amt)
 
         if !self.NoForceSetLoadedRoundsOnReload then -- sorry
             self:SetLoadedRounds(self:Clip1())
+            self:SetLastLoadedRounds(self:Clip1())
         end
     end
 
@@ -351,8 +350,10 @@ function SWEP:GetShouldShotgunReload()
     return self:GetProcessedValue("ShotgunReload")
 end
 
+local arc9_infinite_ammo = GetConVar("arc9_infinite_ammo")
+
 function SWEP:GetInfiniteAmmo()
-    return GetConVar("arc9_infinite_ammo"):GetBool() or self:GetProcessedValue("InfiniteAmmo")
+    return arc9_infinite_ammo:GetBool() or self:GetProcessedValue("InfiniteAmmo", true)
 end
 
 function SWEP:EndReload()
@@ -379,11 +380,11 @@ function SWEP:EndReload()
         end
 
         if getUBGL then
-            if !self:GetEmptyReload() or self:GetProcessedValue("ShotgunReloadIncludesChamber") then
+            if !self:GetEmptyReload() or self:GetProcessedValue("ShotgunReloadIncludesChamber", true) then
                 capacity = capacity + self:GetProcessedValue("UBGLChamberSize")
             end
         else
-            if !self:GetEmptyReload() or self:GetProcessedValue("ShotgunReloadIncludesChamber") then
+            if !self:GetEmptyReload() or self:GetProcessedValue("ShotgunReloadIncludesChamber", true) then
                 capacity = capacity + self:GetProcessedValue("ChamberSize")
             end
         end
@@ -407,12 +408,12 @@ function SWEP:EndReload()
                 end
             end
 
-            self:PlayAnimation(anim, self:GetProcessedValue("ReloadTime", 1), true)
+            self:PlayAnimation(anim, self:GetProcessedValue("ReloadTime", nil, 1), true)
             self:SetReloading(false)
 
             self:SetNthShot(0)
 
-            if self:GetEmptyReload() or self:GetProcessedValue("PartialReloadCountsTowardsNthReload") then
+            if self:GetEmptyReload() or self:GetProcessedValue("PartialReloadCountsTowardsNthReload", true) then
                 self:SetNthReload(self:GetNthReload() + 1)
             end
 
@@ -450,13 +451,14 @@ function SWEP:EndReload()
             local minprogress = (self:GetAnimationEntry(anim) or {}).MinProgress or 0.75
             minprogress = math.min(minprogress, 0.99)
 
-            local t = self:PlayAnimation(anim, self:GetProcessedValue("ReloadTime", 1), true, true)
+            local t = self:PlayAnimation(anim, self:GetProcessedValue("ReloadTime", nil, 1), true, true)
 
             local magswaptime = (self:GetAnimationEntry(anim) or {}).MagSwapTime or 0
 
             if !self.NoForceSetLoadedRoundsOnReload then -- sorry
                 self:SetTimer(magswaptime * t, function()
                     self:SetLoadedRounds(end_clipsize)
+                    self:SetLastLoadedRounds(end_clipsize)
                 end)
             end
 
@@ -471,13 +473,15 @@ function SWEP:EndReload()
 
         self:SetNthShot(0)
 
-        if self:GetEmptyReload() or self:GetProcessedValue("PartialReloadCountsTowardsNthReload") then
+        if self:GetEmptyReload() or self:GetProcessedValue("PartialReloadCountsTowardsNthReload", true) then
             self:SetNthReload(self:GetNthReload() + 1)
         end
         -- self:SetLoadedRounds(self:Clip1())
 
         self:SetEmptyReload(false)
     end
+
+    self:RunHook("Hook_EndReload")
 end
 
 function SWEP:ThinkReload()
@@ -494,7 +498,7 @@ function SWEP:GetLoadingIntoClip()
         ammo = math.huge
     end
 
-    if self:GetProcessedValue("BottomlessClip") then
+    if self:GetProcessedValue("BottomlessClip", true) then
         capacity = ammo
     end
 
@@ -514,10 +518,10 @@ function SWEP:GetLoadedClip()
     if self:GetUBGL() then
         clip = self:Clip2()
 
-        if self:GetProcessedValue("BottomlessClip") then
+        if self:GetProcessedValue("BottomlessClip", true) then
             clip = self:Ammo2()
         end
-    elseif self:GetProcessedValue("BottomlessClip") then
+    elseif self:GetProcessedValue("BottomlessClip", true) then
         clip = ammo
     end
 
@@ -525,7 +529,7 @@ function SWEP:GetLoadedClip()
 end
 
 function SWEP:HasAmmoInClip()
-    if self:GetProcessedValue("BottomlessClip") then
+    if self:GetProcessedValue("BottomlessClip", true) then
         if self:GetUBGL() then
             return self:Clip2() + self:Ammo2() >= self:GetProcessedValue("AmmoPerShot")
         else
@@ -573,9 +577,9 @@ end
 if CLIENT then
     function SWEP:CallNonTPIKReloadAnim()
         if !self:ShouldTPIK() then
-            self:DoPlayerAnimationEvent(self:GetProcessedValue("NonTPIKAnimReload"))
+            self:DoPlayerAnimationEvent(self:GetProcessedValue("NonTPIKAnimReload", true))
         else
-            self:DoPlayerAnimationEvent(self:GetProcessedValue("AnimReload"))
+            self:DoPlayerAnimationEvent(self:GetProcessedValue("AnimReload", true))
         end
     end
 end

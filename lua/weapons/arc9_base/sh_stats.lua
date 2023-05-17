@@ -23,7 +23,8 @@ local quickmodifiers = {
     ["DamageRand"] = GetConVar("arc9_mod_damagerand"),
     ["PhysBulletMuzzleVelocity"] = GetConVar("arc9_mod_muzzlevelocity"),
     ["RPM"] = GetConVar("arc9_mod_rpm"),
-    ["HeadshotDamage"] = GetConVar("arc9_mod_headshotdamage")
+    ["HeadshotDamage"] = GetConVar("arc9_mod_headshotdamage"),
+    ["MalfunctionMeanShotsToFail"] = GetConVar("arc9_mod_malfunction")
 }
 
 local singleplayer = game.SinglePlayer()
@@ -34,6 +35,9 @@ function SWEP:InvalidateCache()
         self:CallOnClient("InvalidateCache")
     end
 
+    for _, v in pairs(self.PV_CacheLong) do v.time = 0 end
+    -- self.PV_CacheLong = {}
+    
     self.StatCache = {}
     self.HookCache = {}
     self.AffectorsCache = nil
@@ -239,6 +243,7 @@ SWEP.PV_Move = 0
 SWEP.PV_Shooting = 0
 SWEP.PV_Melee = 0
 SWEP.PV_Cache = {}
+SWEP.PV_CacheLong = {}
 
 do
     local swepRunHook = SWEP.RunHook
@@ -284,11 +289,15 @@ do
             -- if istable(stat) then
             --     stat.BaseClass = nil
             -- end
-
+            
             if quickmodifiers[val] and isnumber(stat) then
                 local convarvalue = quickmodifiers[val]:GetFloat()
 
-                stat = stat * convarvalue
+                if val == "MalfunctionMeanShotsToFail" then -- dont kill me for this pls
+                    stat = stat / math.max(0.00000001, convarvalue)
+                else
+                    stat = stat * convarvalue
+                end
             end
 
             return stat
@@ -370,8 +379,12 @@ do
 
         if quickmodifiers[val] and isnumber(val) then
             local convarvalue = quickmodifiers[val]:GetFloat()
-
-            stat = stat * convarvalue
+            
+            if val == "MalfunctionMeanShotsToFail" then  -- dont kill me for this pls
+                stat = stat / math.max(0.00000001, convarvalue)
+            else
+                stat = stat * convarvalue
+            end
 
             unaffected = false
         end
@@ -426,7 +439,7 @@ do
         return getmetatable(val) == numberMeta
     end
 
-    function SWEP:GetProcessedValue(val, base, cmd)
+    function SWEP:GetProcessedValue(val, cachedelay, base, cmd)
         local swepDt = self.dt
         -- From now on, we will not call `self:GetJammed()`, `self:GetHeatLockout()`
         -- and similar functions, because all they do is just return `self.dt[thing]`
@@ -436,6 +449,7 @@ do
         local ct = CurTime()
         local upct = UnPredictedCurTime()
         local processedValueName = tostring(val) .. tostring(base)
+
         if CLIENT then
             if self.PV_Cache[processedValueName] ~= nil and self.PV_Tick == upct then
                 return self.PV_Cache[processedValueName]
@@ -445,6 +459,42 @@ do
             end
         end
 
+
+        -- mega cool thing to not calculate mostly static values
+
+        if cachedelay then
+            if self.PV_CacheLong[processedValueName] then
+                local cachetime = self.PV_CacheLong[processedValueName].time
+
+                if cachetime then
+                    if upct > cachetime then
+                        -- print("Renewing cache for - ", processedValueName)
+                        
+
+                        self.PV_CacheLong[processedValueName].time = upct + 0.35 -- idk whats number here should be
+                        self.PV_CacheLong[processedValueName].value = self:GetProcessedValue(val, base, cmd, false)
+                        
+                -- if istable(self.PV_CacheLong[processedValueName].value) then
+                    -- print("Renewed value is a table!")
+                    -- PrintTable(self.PV_CacheLong[processedValueName].value)
+                    -- else print("Renewed value - ", self.PV_CacheLong[processedValueName].value) end
+                        -- print(processedValueName, "working", upct)
+                    end
+                end
+            else
+
+                        -- print("Didn't found cache for - ", processedValueName, ", generating!")
+                self.PV_CacheLong[processedValueName] = {}
+                self.PV_CacheLong[processedValueName].time = upct
+                self.PV_CacheLong[processedValueName].value = self:GetProcessedValue(val, base, cmd, false)
+                -- if istable(self.PV_CacheLong[processedValueName].value) then
+                    -- print("That generated value is a table!")
+                    -- PrintTable(self.PV_CacheLong[processedValueName].value)
+                    -- else print("Generated value - ", self.PV_CacheLong[processedValueName].value) end
+            end
+
+            return self.PV_CacheLong[processedValueName].value
+        end
 
 
         local stat = arcGetValue(self, val, base)

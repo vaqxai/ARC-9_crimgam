@@ -1,7 +1,9 @@
 SWEP.ClientFreeAimAng = Angle(0, 0, 0)
 
+local faconvar = GetConVar("arc9_mod_freeaim")
+
 function SWEP:ThinkFreeAim()
-    if !GetConVar("arc9_mod_freeaim"):GetBool() then return true end
+    if !faconvar:GetBool() then return true end
 
     local diff = self:GetOwner():EyeAngles() - self:GetLastAimAngle()
 
@@ -35,7 +37,7 @@ function SWEP:ThinkFreeAim()
 end
 
 function SWEP:GetFreeAimOffset()
-    if !GetConVar("arc9_mod_freeaim"):GetBool() then return angle_zero end
+    if !faconvar:GetBool() then return angle_zero end
     if CLIENT then
         return self.ClientFreeAimAng
     else
@@ -43,19 +45,19 @@ function SWEP:GetFreeAimOffset()
     end
 end
 
+local arc9_mod_sway = GetConVar("arc9_mod_sway")
 
 local smoothswayamt = 0
+
 function SWEP:GetFreeSwayAngles()
-    if !GetConVar("arc9_mod_sway"):GetBool() then return angle_zero end
+    if !arc9_mod_sway:GetBool() then return end
     local swayamt = self:GetFreeSwayAmount()
 
     local swayspeed = 2
+    local isScope = self:IsUsingRTScope()
 
-    local isScope = CLIENT and self:GetSight() and self:GetSight().atttbl and self:GetSight().atttbl.RTScope
-    local cheap = CLIENT and isScope and GetConVar("ARC9_cheapscopes"):GetBool()
-
-    swayamt = cheap and 1 - self:GetSightAmount() or swayamt * (1-self:GetSightAmount() * 0.2)
-    smoothswayamt = (cheap or CLIENT) and Lerp(RealFrameTime(), smoothswayamt, swayamt) or swayamt
+    swayamt = isScope and 0 or swayamt * (1-self:GetSightAmount() * 0.2)
+    smoothswayamt = CLIENT and Lerp(RealFrameTime(), smoothswayamt, swayamt) or swayamt
 
     local ang = Angle(math.sin(CurTime() * 0.6 * swayspeed) + (math.cos(CurTime() * 2) * 0.5), math.sin(CurTime() * 0.4 * swayspeed) + (math.cos(CurTime() * 1.6) * 0.5), 0)
 

@@ -246,7 +246,7 @@ SWEP.ShootEnt = nil -- Set to an entity to launch it out of this weapon.
 SWEP.ShootEntForce = 10000
 SWEP.ShootEntInheritPlayerVelocity = false -- Set to true to inherit velocity
 SWEP.ShootEntInheritPlayerVelocityLimit = 0 -- Upper limit of velocity to inherit. 0 - no limit.
-SWEP.ShootEntityData = {} -- Extra data that can be given to a projectile. Sets SENT.WeaponDataLink with this table.
+SWEP.ShootEntData = {} -- Extra data that can be given to a projectile. Sets ENT.ShootEntData with this table.
 
 SWEP.Throwable = false -- Set to true to give this weapon throwing capabilities.
 SWEP.Tossable = true -- When grenade is enabled, right click will toss. Set to false to disable, allowing you to aim down sights.
@@ -332,6 +332,8 @@ SWEP.ReloadWhileSprint = true -- This weapon can reload while the user is sprint
 SWEP.ReloadInSights = true -- This weapon can aim down sights while reloading.
 SWEP.PartialReloadCountsTowardsNthReload = true -- If the gun is not empty, it counts towards the Nth reload. Useful for guns with spare magazine animations.
 
+SWEP.CanReloadWhileUnCycled = false
+
 SWEP.CanFireUnderwater = false -- This weapon can shoot while underwater.
 
 SWEP.Disposable = false -- When all ammo is expended, this gun will remove itself from the inventory.
@@ -380,6 +382,8 @@ SWEP.Firemodes = {
         -- add other attachment modifiers
     }
 }
+
+SWEP.NoFiremodeWhenEmpty = false -- Cannot switch firemode when empty
 
 SWEP.FiremodeAnimLock = false -- Firemode animation cannot be interrupted
 
@@ -708,6 +712,8 @@ SWEP.MalfunctionMeanShotsToFail = 1000 -- The mean number of shots between malfu
 -- SWEP.Hook_GrenadeCreated(self, nades) return end -- Called when grenade entities are created. nades is a table of entities.
 -- SWEP.Hook_Bash(self, tr) return end
 -- SWEP.Hook_BashHit(self, data) return end -- {tr, dmg}
+-- SWEP.Hook_PostReload(self) return end -- called after a reload successfully starts
+-- SWEP.Hook_EndReload(self) return end -- called after a reload loads ammo (ammo went in magazine)
 
 -- SOUND NAMES FOR TRANSLATESOUND:
 -- install
@@ -814,7 +820,7 @@ SWEP.FreeAimRadiusMultBipod = 0
 SWEP.ShootVolume = 125
 SWEP.ShootVolumeActual = 1
 SWEP.ShootPitch = 100
-SWEP.ShootPitchVariation = 0.05
+SWEP.ShootPitchVariation = 5 -- Not multiplied, but actually just added/subtracted.
 
 SWEP.FirstShootSound = nil                      -- First fire
 SWEP.ShootSound = ""                            -- Fire
@@ -1218,6 +1224,7 @@ SWEP.Attachments = {
     --     Installed = nil,
     --     MergeSlots = {}, -- merge this slot with another
     --     StickerModel = "", -- This is the model that will be used for the sticker
+    --     StickerModelWorld = "", -- This is the model that will be used for the sticker on the world model. Good for mirror models
     --     CosmeticOnly = false, -- This attachment is cosmetic only, and will be placed in the Personalization tab.
     --     SubAttachments = {
     --         {
@@ -1570,7 +1577,7 @@ function SWEP:SetupDataTables()
 end
 
 function SWEP:SecondaryAttack()
-    if self:GetValue("UBGL") and self:GetProcessedValue("UBGLInsteadOfSights") then
+    if self:GetValue("UBGL") and self:GetProcessedValue("UBGLInsteadOfSights", true) then
         -- self:SetUBGL(true)
         self:ToggleUBGL(true)
         self:DoPrimaryAttack()

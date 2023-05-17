@@ -1,6 +1,6 @@
 function SWEP:DoEffects()
     if !IsFirstTimePredicted() then return end
-    if self:GetProcessedValue("NoMuzzleEffect") then return end
+    if self:GetProcessedValue("NoMuzzleEffect", true) then return end
 
     local muzz_qca = self:GetQCAMuzzle()
 
@@ -11,8 +11,10 @@ function SWEP:DoEffects()
 
     local muzzle = "arc9_muzzleeffect"
 
-    if !self:GetProcessedValue("MuzzleParticle") and self:GetProcessedValue("MuzzleEffect") then
-        muzzle = self:GetProcessedValue("MuzzleEffect")
+    local muzefect = self:GetProcessedValue("MuzzleEffect", true)
+
+    if !self:GetProcessedValue("MuzzleParticle", true) and muzefect then
+        muzzle = muzefect
         data:SetScale(1)
         data:SetFlags(0)
         data:SetEntity(self:GetVM())
@@ -26,15 +28,15 @@ function SWEP:DoEffects()
 end
 
 function SWEP:GetQCAMuzzle()
-    return self:GetProcessedValue("MuzzleEffectQCA")
+    return self:GetProcessedValue("MuzzleEffectQCA", true)
 end
 
 function SWEP:GetQCAEject()
-    return self:GetProcessedValue("CaseEffectQCA")
+    return self:GetProcessedValue("CaseEffectQCA", true)
 end
 
 function SWEP:GetQCAMagdrop()
-    return self:GetProcessedValue("DropMagazineQCA") or self:GetProcessedValue("CaseEffectQCA")
+    return self:GetProcessedValue("DropMagazineQCA", true) or self:GetProcessedValue("CaseEffectQCA", true)
 end
 
 SWEP.EjectedShells = {}
@@ -51,19 +53,20 @@ function SWEP:DoEject(index, attachment)
     data:SetAttachment(eject_qca)
     data:SetFlags(index or 0)
 
-    for i = 1, self:GetProcessedValue("ShellEffectCount") do
-        util.Effect(self:GetProcessedValue("ShellEffect") or "ARC9_shelleffect", data, true)
+    for i = 1, self:GetProcessedValue("ShellEffectCount", true) do
+        util.Effect(self:GetProcessedValue("ShellEffect", true) or "ARC9_shelleffect", data, true)
     end
 end
 
 function SWEP:GetTracerOrigin()
     local ow = self:GetOwner()
-    local wm = ow:IsNPC() or !ow:IsValid() or !ow:GetViewModel():IsValid() or ow:ShouldDrawLocalPlayer()
+    local vm = ow.GetViewModel and ow:GetViewModel() or nil
+    local wm = ow:IsNPC() or !ow:IsValid() or !vm:IsValid() or ow:ShouldDrawLocalPlayer()
     local att = self:GetQCAMuzzle()
     local muzz = self
 
     if !wm then
-        muzz = ow:GetViewModel()
+        muzz = vm
     end
 
     if muzz and muzz:IsValid() then
@@ -76,7 +79,7 @@ function SWEP:GetTracerOrigin()
 end
 
 function SWEP:GetMuzzleDevice(wm, n)
-    if self:GetProcessedValue("IgnoreMuzzleDevice") then
+    if self:GetProcessedValue("IgnoreMuzzleDevice", true) then
         if wm then return self:GetWM() else return self:GetVM() end
     end
 

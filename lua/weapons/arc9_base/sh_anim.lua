@@ -76,13 +76,13 @@ function SWEP:PlayAnimation(anim, mult, lock, delayidle, noproxy, notranslate)
 
         mult = mult * (animation.Mult or 1)
 
+        if animation.Reverse then
+            mult = mult * -1
+        end
+
         local tmult = 1
 
         tmult = (mdl:SequenceDuration(seq) / time) / mult
-
-        if animation.Reverse then
-            tmult = tmult * -1
-        end
 
         if animation.ProxyAnimation then
             mdl:SetSequence(seq)
@@ -94,7 +94,12 @@ function SWEP:PlayAnimation(anim, mult, lock, delayidle, noproxy, notranslate)
 
         self:SetSequenceIndex(seq or 0)
         self:SetSequenceSpeed((1 / time) / mult)
-        self:SetSequenceCycle(0)
+
+        if mult < 0 then
+            self:SetSequenceCycle(1)
+        else
+            self:SetSequenceCycle(0)
+        end
 
         mult = math.abs(mult)
 
@@ -107,6 +112,14 @@ function SWEP:PlayAnimation(anim, mult, lock, delayidle, noproxy, notranslate)
         if animation.DropMagAt then
             self:SetTimer(animation.DropMagAt * mult, function()
                 self:DropMagazine()
+            end)
+        end
+
+        if animation.DumpAmmo then
+            self:SetTimer((animation.MinProgress or 0.5) * mult, function()
+                if SERVER then
+                    self:Unload()
+                end
             end)
         end
 
@@ -255,18 +268,16 @@ function SWEP:Idle()
     if self:GetPrimedAttack() then return end
     if self:GetSafe() then return end
 
-    local anim = "idle_"
+    local anim = "idle"
     local clip = self:Clip1()
-    local anim2
+    local banim = anim
 
     for i = 1, self:GetCapacity(self:GetUBGL()) - clip do
-        anim2 = anim .. tostring(i)
-
-        if self:HasAnimation(anim2) then
-            anim = anim2
-            break
+        if self:HasAnimation(anim .. "_" .. tostring(i)) then
+            banim = anim .. "_" .. tostring(i)
         end
     end
+    anim = banim
 
     local speed = 1
 
@@ -282,58 +293,62 @@ SWEP.PoseParamState = {}
 function SWEP:DoPoseParams()
     local vm = self:GetVM()
 
-    if (IsValid(vm)) then
-        for i, k in pairs(self.PoseParamState) do
-            vm:SetPoseParameter(i, k)
-        end
+    if !vm or !IsValid(vm) then return end
+
+    for i, k in pairs(self.PoseParamState) do
+        vm:SetPoseParameter(i, k)
     end
 end
 
 function SWEP:ThinkAnimation()
-    if CLIENT and self:GetSequenceProxy() != 0 then
-        for _, wm in ipairs({true, false}) do
-            local mdl = self:GetAnimationProxyModel(wm)
+    if CLIENT then 
+        local seqprox = self:GetSequenceProxy()
 
-            if !IsValid(mdl) then continue end
+        if seqprox != 0 then
+            for _, wm in ipairs({true, false}) do
+                local mdl = self:GetAnimationProxyModel(wm)
 
-            mdl:SetSequence(self:GetSequenceIndex())
-            mdl:SetCycle(self:GetSequenceCycle())
+                if !IsValid(mdl) then continue end
 
-            if self:GetSequenceProxy() == self.LHIKModelAddress then
-                local lhik_mdl
+                mdl:SetSequence(self:GetSequenceIndex())
+                mdl:SetCycle(self:GetSequenceCycle())
 
-                if wm then
-                    lhik_mdl = self.LHIKModelWM
-                else
-                    lhik_mdl = self.LHIKModel
+                if seqprox == self.LHIKModelAddress then
+                    local lhik_mdl
+
+                    if wm then
+                        lhik_mdl = self.LHIKModelWM
+                    else
+                        lhik_mdl = self.LHIKModel
+                    end
+
+                    if !lhik_mdl then return end
+
+                    lhik_mdl:SetSequence(self:GetSequenceIndex())
+                    lhik_mdl:SetCycle(self:GetSequenceCycle())
                 end
 
-                if !lhik_mdl then return end
+                if seqprox == self.RHIKModelAddress then
+                    local rhik_mdl
 
-                lhik_mdl:SetSequence(self:GetSequenceIndex())
-                lhik_mdl:SetCycle(self:GetSequenceCycle())
-            end
+                    if wm then
+                        rhik_mdl = self.RHIKModelWM
+                    else
+                        rhik_mdl = self.RHIKModel
+                    end
 
-            if self:GetSequenceProxy() == self.RHIKModelAddress then
-                local rhik_mdl
+                    if !rhik_mdl then return end
 
-                if wm then
-                    rhik_mdl = self.RHIKModelWM
-                else
-                    rhik_mdl = self.RHIKModel
+                    rhik_mdl:SetSequence(self:GetSequenceIndex())
+                    rhik_mdl:SetCycle(self:GetSequenceCycle())
                 end
 
-                if !rhik_mdl then return end
+                local anim_mdl = self:GetAnimationProxyGunDriver()
 
-                rhik_mdl:SetSequence(self:GetSequenceIndex())
-                rhik_mdl:SetCycle(self:GetSequenceCycle())
-            end
-
-            local anim_mdl = self:GetAnimationProxyGunDriver()
-
-            if IsValid(anim_mdl) then
-                anim_mdl:SetSequence(self:GetSequenceIndex())
-                anim_mdl:SetCycle(self:GetSequenceCycle())
+                if IsValid(anim_mdl) then
+                    anim_mdl:SetSequence(self:GetSequenceIndex())
+                    anim_mdl:SetCycle(self:GetSequenceCycle())
+                end
             end
         end
     end

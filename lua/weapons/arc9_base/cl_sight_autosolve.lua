@@ -12,7 +12,7 @@ function SWEP:GenerateAutoSight(sight, slottbl)
 
     debugoverlay.Axis(pos, ang, 16, 1, true)
 
-    local s_pos = Vector(0, self:GetProcessedValue("AdditionalSightDistance"), 0)
+    local s_pos = Vector(0, self:GetProcessedValue("AdditionalSightDistance", true), 0)
     local s_ang = Angle(0, 0, 0)
 
     local up, forward, right = s_ang:Up(), s_ang:Forward(), s_ang:Right()
@@ -50,12 +50,16 @@ function SWEP:GetExtraSightPositions()
     return se, s.ExtraAng or Angle(0, 0, 0)
 end
 
+local arc9_cheapscopes = GetConVar("arc9_cheapscopes")
+local arc9_compensate_sens = GetConVar("arc9_compensate_sens")
+local fov_desired = GetConVar("fov_desired")
+
 function SWEP:GetMagnification()
     local sight = self:GetSight()
 
     local target = sight.Magnification or 1
 
-    if GetConVar("arc9_cheapscopes"):GetBool() and !sight.Disassociate then
+    if arc9_cheapscopes:GetBool() and !sight.Disassociate then
         local atttbl = sight.atttbl
 
         if sight.BaseSight then
@@ -78,14 +82,14 @@ end
 
 function SWEP:AdjustMouseSensitivity()
     if !self:GetInSights() then return end
-    if !GetConVar("arc9_compensate_sens"):GetBool() then return end
+    if !arc9_compensate_sens:GetBool() then return end
 
     if self.Peeking then
         return
     end
 
     local mag = self:GetMagnification()
-    local fov = GetConVar("fov_desired"):GetFloat()
+    local fov = fov_desired:GetFloat()
 
     local sight = self:GetSight()
     local atttbl = sight.atttbl

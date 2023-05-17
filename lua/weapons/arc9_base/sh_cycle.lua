@@ -1,19 +1,20 @@
 function SWEP:ThinkCycle()
     if self:StillWaiting() then return end
+    local owner = self:GetOwner()
 
     local manual = self:ShouldManualCycle()
 
-    local cycling = !self:GetOwner():KeyDown(IN_ATTACK)
+    local cycling = !owner:KeyDown(IN_ATTACK)
 
     if manual then
-        cycling = self:GetOwner():KeyDown(IN_RELOAD)
+        cycling = owner:KeyDown(IN_RELOAD)
     end
 
-    if self:GetNeedsCycle() and (cycling or self:GetProcessedValue("SlamFire")) then
+    if self:GetNeedsCycle() and (cycling or self:GetProcessedValue("SlamFire", true)) then
 
         if self.MalfunctionCycle and (IsFirstTimePredicted() and self:RollJam()) then return end
 
-        local ejectdelay = self:GetProcessedValue("EjectDelay")
+        local ejectdelay = self:GetProcessedValue("EjectDelay", true)
 
         local t = self:PlayAnimation("cycle", self:GetProcessedValue("CycleTime"), false)
 
@@ -21,7 +22,7 @@ function SWEP:ThinkCycle()
 
         self:SetAnimLockTime(CurTime() + t)
 
-        if IsFirstTimePredicted() and !self:GetProcessedValue("NoShellEjectManualAction") then
+        if IsFirstTimePredicted() and !self:GetProcessedValue("NoShellEjectManualAction", true) then
             if ejectdelay == 0 then
                 self:DoEject()
             else

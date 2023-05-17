@@ -3,6 +3,10 @@ function SWEP:OnReloaded()
     self:InvalidateCache()
 end
 
+local arc9_precache_sounds_onfirsttake = GetConVar("arc9_precache_sounds_onfirsttake")
+local arc9_precache_wepmodels_onfirsttake = GetConVar("arc9_precache_wepmodels_onfirsttake")
+local arc9_precache_attsmodels_onfirsttake = GetConVar("arc9_precache_attsmodels_onfirsttake")
+
 function SWEP:Initialize()
     local owner = self:GetOwner()
 
@@ -41,7 +45,7 @@ function SWEP:Initialize()
     self.Primary.Ammo = self:GetProcessedValue("Ammo")
     self.LastAmmo = self.Primary.Ammo
 
-    local bottomless = self:GetProcessedValue("BottomlessClip")
+    local bottomless = self:GetProcessedValue("BottomlessClip", true)
     local clip = bottomless and self:GetProcessedValue("AmmoPerShot") or self.LastClipSize
     self.Primary.DefaultClip = clip * math.max(1, self:GetProcessedValue("SupplyLimit") + (bottomless and 0 or 1))
 
@@ -50,14 +54,29 @@ function SWEP:Initialize()
         self.Primary.DefaultClip = 0
     end
 
-    ARC9.CacheAttsModels()
+    if self:GetValue("UBGL") then
+        self.Secondary.Ammo = self:GetValue("UBGLAmmo")
+        self.Secondary.DefaultClip = self:GetValue("UBGLClipSize") * math.max(1, self:GetValue("SecondarySupplyLimit") + 1)
+    end
 
-    if GetConVar("arc9_precache_sounds_onfirsttake"):GetBool() then
+    self:SetClip1(self.Primary.DefaultClip)
+    self:SetClip2(self.Secondary.DefaultClip)
+
+    self:SetLastLoadedRounds(self.LastClipSize)
+
+    if self:LookupPoseParameter("sights") != -1 then self.HasSightsPoseparam = true end
+    if self:LookupPoseParameter("firemode") != -1 then self.HasFiremodePoseparam = true end
+
+    if arc9_precache_sounds_onfirsttake:GetBool() then
         ARC9.CacheWepSounds(self, self:GetClass())
     end
-    
-    if GetConVar("arc9_precache_wepmodels_onfirsttake"):GetBool() then
+
+    if arc9_precache_wepmodels_onfirsttake:GetBool() then
         ARC9.CacheWeaponsModels()
+    end
+    
+    if arc9_precache_attsmodels_onfirsttake:GetBool() then
+        ARC9.CacheAttsModels()
     end
 end
 
@@ -166,54 +185,54 @@ end
 
 function SWEP:SetShouldHoldType()
     if self:GetOwner():IsNPC() then
-        local htnpc = self:GetValue("HoldTypeNPC")
+        local htnpc = self:GetValue("HoldTypeNPC", true)
 
         if !htnpc then
-            if self:GetProcessedValue("ManualAction") then
+            if self:GetProcessedValue("ManualAction", true) then
                 self:SetHoldType("shotgun")
             else
-                self:SetHoldType(self:GetValue("HoldTypeSights") or self:GetValue("HoldType"))
+                self:SetHoldType(self:GetValue("HoldTypeSights", true) or self:GetValue("HoldType", true))
             end
         else
-            self:SetHoldType(self:GetValue("HoldTypeNPC"))
+            self:SetHoldType(self:GetValue("HoldTypeNPC", true))
         end
 
         return
     end
 
     if self:GetInSights() then
-        if self:GetProcessedValue("HoldTypeSights") then
-            self:SetHoldType(self:GetProcessedValue("HoldTypeSights"))
+        if self:GetProcessedValue("HoldTypeSights", true) then
+            self:SetHoldType(self:GetProcessedValue("HoldTypeSights", true))
 
             return
         end
     end
 
     if self:GetSafe() then
-        if self:GetProcessedValue("HoldTypeHolstered") then
-            self:SetHoldType(self:GetProcessedValue("HoldTypeHolstered"))
+        if self:GetProcessedValue("HoldTypeHolstered", true) then
+            self:SetHoldType(self:GetProcessedValue("HoldTypeHolstered", true))
 
             return
         end
     end
 
     if self:GetIsSprinting() or self:GetSafe() then
-        if self:GetProcessedValue("HoldTypeSprint") then
-            self:SetHoldType(self:GetProcessedValue("HoldTypeSprint"))
+        if self:GetProcessedValue("HoldTypeSprint", true) then
+            self:SetHoldType(self:GetProcessedValue("HoldTypeSprint", true))
 
             return
         end
     end
 
     if self:GetCustomize() then
-        if self:GetProcessedValue("HoldTypeCustomize") then
-            self:SetHoldType(self:GetProcessedValue("HoldTypeCustomize"))
+        if self:GetProcessedValue("HoldTypeCustomize", true) then
+            self:SetHoldType(self:GetProcessedValue("HoldTypeCustomize", true))
 
             return
         end
     end
 
-    self:SetHoldType(self:GetProcessedValue("HoldType"))
+    self:SetHoldType(self:GetProcessedValue("HoldType", true))
 end
 
 function SWEP:OnDrop()

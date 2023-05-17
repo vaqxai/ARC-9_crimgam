@@ -25,9 +25,12 @@ function SWEP:CreateFlashlights()
             local newlight = {
                 slottbl = k,
                 light = ProjectedTexture(),
-                col = color_white,
-                br = 3,
+                col = atttbl.FlashlightColor or color_white,
+                br = atttbl.FlashlightBrightness or 3,
+                qca = atttbl.FlashlightAttachment,
+                nodotter = atttbl.Flashlight360
             }
+
             total_lights = total_lights + 1
 
             local l = newlight.light
@@ -58,7 +61,7 @@ function SWEP:CreateFlashlights()
         end
     end
 
-    if total_lights > 2 then -- you are a madman
+    if total_lights > 1 then -- you are a madman
         for i, k in ipairs(self.Flashlights) do
             if k.light:IsValid() then k.light:SetEnableShadows(false) end
         end
@@ -77,13 +80,19 @@ function SWEP:KillFlashlights()
     self.Flashlights = nil
 end
 
+local arc9_allflash = GetConVar("arc9_allflash")
+local fuckingbullshit = Vector(0, 0, 0.001)
+
 function SWEP:DrawFlashlightsWM()
-    if (!GetConVar("arc9_allflash"):GetBool()) and self:GetOwner() != LocalPlayer() then return end
+    local owner = self:GetOwner()
+    local lp = LocalPlayer()
+
+    if (!arc9_allflash:GetBool()) and owner != lp then return end
 
     if !self.Flashlights then
         self:CreateFlashlights()
     end
-
+    
     for i, k in ipairs(self.Flashlights) do
         local model = (k.slottbl or {}).WModel
 
@@ -91,13 +100,24 @@ function SWEP:DrawFlashlightsWM()
 
         local pos, ang
 
+
         if !model then
-            pos = self:GetOwner():EyePos()
-            ang = self:GetOwner():EyeAngles()
+            pos = owner:EyePos()
+            ang = owner:EyeAngles()
         else
             pos = model:GetPos()
             ang = model:GetAngles()
         end
+
+
+        if k.qca then
+            a = model:GetAttachment(k.qca)
+            pos, ang = a.Pos, a.Ang
+        end
+        
+        self:DrawLightFlare(pos + fuckingbullshit, ang, k.col, k.br * 20, i, nil, k.nodotter)
+
+        if k.qca then ang:RotateAroundAxis(ang:Up(), 90) end
 
         -- ang:RotateAroundAxis(ang:Up(), 90)
 
@@ -105,14 +125,14 @@ function SWEP:DrawFlashlightsWM()
             start = pos,
             endpos = pos + ang:Forward() * 16,
             mask = MASK_OPAQUE,
-            filter = LocalPlayer(),
+            filter = lp,
         })
         if tr.Fraction < 1 then -- We need to push the flashlight back
             local tr2 = util.TraceLine({
                 start = pos,
                 endpos = pos - ang:Forward() * 16,
                 mask = MASK_OPAQUE,
-                filter = LocalPlayer(),
+                filter = lp,
             })
             -- push it as back as the area behind us allows
             pos = pos + -ang:Forward() * 16 * math.min(1 - tr.Fraction, tr2.Fraction)
@@ -131,6 +151,10 @@ function SWEP:DrawFlashlightsVM()
         self:CreateFlashlights()
     end
 
+    local owner = self:GetOwner()
+    local lp = LocalPlayer()
+    local eyepos = owner:EyePos()
+
     for i, k in ipairs(self.Flashlights) do
         local model = (k.slottbl or {}).VModel
 
@@ -139,50 +163,46 @@ function SWEP:DrawFlashlightsVM()
         local pos, ang
 
         if !model then
-            pos = self:GetOwner():EyePos()
-            ang = self:GetOwner():EyeAngles()
+            pos = eyepos
+            ang = owner:EyeAngles()
         else
             pos = model:GetPos()
             ang = model:GetAngles()
         end
 
+        if k.qca then
+            a = model:GetAttachment(k.qca)
+
+            if a then
+                pos, ang = a.Pos, a.Ang
+            else
+                ang:RotateAroundAxis(ang:Up(), -90)
+            end
+        end
+
+        self:DrawLightFlare(pos, ang, k.col, k.br * 25, i, true, k.nodotter)
+
+        if k.qca then ang:RotateAroundAxis(ang:Up(), 90) end
+
         local tr = util.TraceLine({
-            start = self:GetOwner():EyePos(),
-            endpos = self:GetOwner():EyePos() - -ang:Forward() * 128,
+            start = eyepos,
+            endpos = eyepos - -ang:Forward() * 128,
             mask = MASK_OPAQUE,
-            filter = LocalPlayer(),
+            filter = lp,
         })
         if tr.Fraction < 1 then -- We need to push the flashlight back
             local tr2 = util.TraceLine({
-                start = self:GetOwner():EyePos(),
-                endpos = self:GetOwner():EyePos() + -ang:Forward() * 128,
+                start = eyepos,
+                endpos = eyepos + -ang:Forward() * 128,
                 mask = MASK_OPAQUE,
-                filter = LocalPlayer(),
+                filter = lp,
             })
             -- push it as back as the area behind us allows
             pos = pos + -ang:Forward() * 128 * math.min(1 - tr.Fraction, tr2.Fraction)
         end
 
-        -- ang:RotateAroundAxis(ang:Up(), 90)
-
         k.light:SetPos(pos)
         k.light:SetAngles(ang)
         k.light:Update()
-
-        -- local col = k.col
-
-        -- local dl = DynamicLight(self:EntIndex())
-
-        -- if dl then
-        --     dl.pos = pos
-        --     dl.r = col.r
-        --     dl.g = col.g
-        --     dl.b = col.b
-        --     dl.brightness = k.br or 2
-        --     -- print(z / maxz)
-        --     dl.Decay = 1000 / 0.1
-        --     dl.dietime = CurTime() + 0.1
-        --     dl.size = (k.br or 2) * 64
-        -- end
     end
 end

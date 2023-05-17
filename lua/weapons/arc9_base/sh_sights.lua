@@ -4,11 +4,11 @@ end
 
 function SWEP:EnterSights()
     if self:GetSprintAmount() > 0 then return end
-    if !self:GetProcessedValue("HasSights") then return end
+    if !self:GetProcessedValue("HasSights", true) then return end
     if self:GetCustomize() then return end
-    if !self:GetProcessedValue("ReloadInSights") and self:GetReloading() then return end
+    if !self:GetProcessedValue("ReloadInSights", true) and self:GetReloading() then return end
     if self:GetHolsterTime() > 0 then return end
-    if self:GetProcessedValue("UBGLInsteadOfSights") then return end
+    if self:GetProcessedValue("UBGLInsteadOfSights", true) then return end
     if self:GetSafe() then return end
     if self:GetAnimLockTime() > CurTime() and !self:GetReloading() then return end -- i hope this won't cause any issues later
     if self:GetValue("UBGL") and self:GetOwner():KeyDown(IN_USE) then return end
@@ -19,7 +19,7 @@ function SWEP:EnterSights()
     if IsFirstTimePredicted() then
         local soundtab1 = {
             name = "entersights",
-            sound = self:RandomChoice(self:GetProcessedValue("EnterSightsSound")),
+            sound = self:RandomChoice(self:GetProcessedValue("EnterSightsSound", true)),
             channel = ARC9.CHAN_FIDDLE,
         }
 
@@ -27,7 +27,7 @@ function SWEP:EnterSights()
     end
 
     if !self:StillWaiting() then
-        if self:GetProcessedValue("InstantSightIdle") then
+        if self:GetProcessedValue("InstantSightIdle", true) then
             self:PlayAnimation("idle")
         else
             local anim = self:TranslateAnimation("enter_sights")
@@ -48,7 +48,7 @@ function SWEP:ExitSights()
     if IsFirstTimePredicted() then
         local soundtab1 = {
             name = "exitsights",
-            sound = self:RandomChoice(self:GetProcessedValue("ExitSightsSound")),
+            sound = self:RandomChoice(self:GetProcessedValue("ExitSightsSound", true)),
             channel = ARC9.CHAN_FIDDLE,
         }
 
@@ -56,7 +56,7 @@ function SWEP:ExitSights()
     end
 
     if !self:StillWaiting() then
-        if self:GetProcessedValue("InstantSightIdle") then
+        if self:GetProcessedValue("InstantSightIdle", true) then
             self:PlayAnimation("idle")
         else
             local anim = self:TranslateAnimation("exit_sights")
@@ -90,6 +90,8 @@ function SWEP:BuildMultiSight()
     local keepbaseirons = true
     local keepmodularirons = true
 
+    local dev3 = ARC9.Dev(3)
+
     for i, slottbl in ipairs(self:GetSubSlotList()) do
         if !slottbl.Installed then continue end
         if slottbl.BlockSights then continue end
@@ -105,7 +107,7 @@ function SWEP:BuildMultiSight()
                 local s = {}
 
                 if CLIENT then
-                    if ARC9.Dev(3) then
+                    if dev3 then
                         s = self:GenerateAutoSight({
                             Pos = Vector(GetConVar("arc9_dev_irons_x"):GetFloat(), GetConVar("arc9_dev_irons_y"):GetFloat(), GetConVar("arc9_dev_irons_z"):GetFloat()),
                             Ang = Angle(GetConVar("arc9_dev_irons_pitch"):GetFloat(), GetConVar("arc9_dev_irons_yaw"):GetFloat(), GetConVar("arc9_dev_irons_roll"):GetFloat()),
@@ -133,7 +135,7 @@ function SWEP:BuildMultiSight()
                 s.OnSwitchToSight = sight.OnSwitchToSight
                 s.OnSwitchFromSight = sight.OnSwitchFromSight
 
-                if ARC9.Dev(3) then
+                if dev3 then
                     s.OriginalSightTable = {
                         Pos = Vector(GetConVar("arc9_dev_irons_x"):GetFloat(), GetConVar("arc9_dev_irons_y"):GetFloat(), GetConVar("arc9_dev_irons_z"):GetFloat()),
                         Ang = Angle(GetConVar("arc9_dev_irons_pitch"):GetFloat(), GetConVar("arc9_dev_irons_yaw"):GetFloat(), GetConVar("arc9_dev_irons_roll"):GetFloat()),
@@ -183,7 +185,7 @@ function SWEP:BuildMultiSight()
 
     if keepbaseirons then
         local tbl = {}
-        if ARC9.Dev(3) then
+        if dev3 then
             table.insert(tbl, {
                 Pos = Vector(GetConVar("arc9_dev_irons_x"):GetFloat(), GetConVar("arc9_dev_irons_y"):GetFloat(), GetConVar("arc9_dev_irons_z"):GetFloat()),
                 Ang = Angle(GetConVar("arc9_dev_irons_pitch"):GetFloat(), GetConVar("arc9_dev_irons_yaw"):GetFloat(), GetConVar("arc9_dev_irons_roll"):GetFloat()),
@@ -272,7 +274,6 @@ do
 
     function SWEP:ThinkSights()
         -- if self:GetSafe() then return end
-        local vm = self:GetVM()
         local swepDt = self.dt
 
         local sighted = swepDt.InSights
@@ -283,10 +284,6 @@ do
         local oldamt = swepDt.SightAmount
         local amt = math.Approach(
             oldamt, sighted and 1 or 0, FrameTime() / self:GetProcessedValue("AimDownSightsTime"))
-
-        if CLIENT then
-            entitySetPoseParameter(vm, "sights", amt)
-        end
 
         if oldamt ~= amt then
             self:SetSightAmount(amt)
@@ -326,7 +323,12 @@ do
             swepSwitchMultiSight(self)
         end
 
-        entitySetPoseParameter(vm, "sights", math.max(swepDt.SightAmount, swepGetBipodAmount(self)))
+        if self.HasSightsPoseparam then
+            if CLIENT then
+                entitySetPoseParameter(self:GetVM(), "sights", amt)
+            end
+            entitySetPoseParameter(self:GetVM(), "sights", math.max(swepDt.SightAmount, swepGetBipodAmount(self)))
+        end
     end
 end
 

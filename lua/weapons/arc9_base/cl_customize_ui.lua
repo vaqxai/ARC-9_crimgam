@@ -1,5 +1,3 @@
-local mat_grad = Material("arc9/gradient.png")
-
 local DevMode = false
 
 local ARC9ScreenScale = ARC9.ScreenScale
@@ -1292,6 +1290,9 @@ function SWEP:CreateHUD_RHP()
     nameplate.Paint = function(self2, w, h)
         if !IsValid(self) then return end
 
+        local redname
+        if self.Hook_RedPrintName then redname = self:RunHook("Hook_RedPrintName") end
+
         -- if (self.CustomizeButtons[self.CustomizeTab + 1] or {}).inspect then return end
 
         surface.SetFont("ARC9_24")
@@ -1299,7 +1300,7 @@ function SWEP:CreateHUD_RHP()
 
         surface.SetFont("ARC9_24")
         surface.SetTextPos(w/2 - tw/2, 0)
-        surface.SetTextColor(ARC9.GetHUDColor("fg"))
+        surface.SetTextColor(redname and ARC9.GetHUDColor("hi_3d") or ARC9.GetHUDColor("fg"))
         surface.DrawText(self.PrintName or "No name ??? wtf")
 
         -- class
@@ -1427,14 +1428,15 @@ function SWEP:CreateHUD_RHP()
     lowerpanel:MoveToBack()
 
     local hascosmetic = false
-    local onlycosmetic = true
+    local hasnoncosmetic = false
 
     for _, slottbl in pairs(self:GetSubSlotList()) do
-        if hascosmetic and !onlycosmetic then break end
+        if hascosmetic and hasnoncosmetic then break end
+        if slottbl.Hidden then continue end
         if self:SlotIsCosmetic(slottbl) then
             hascosmetic = true
         else
-            onlycosmetic = false
+            hasnoncosmetic = true
         end
     end
 
@@ -1442,7 +1444,7 @@ function SWEP:CreateHUD_RHP()
         table.remove(self.CustomizeButtons, 2)
     end
 
-    if (onlycosmetic or !self.Attachments[1]) and self.CustomizeButtons[1].customize then  -- NO ATTS CUST PANEL REMOVAL
+    if (!hasnoncosmetic) and self.CustomizeButtons[1].customize then  -- NO ATTS CUST PANEL REMOVAL
         table.remove(self.CustomizeButtons, 1)
         self.CustomizeButtons[1].cutcorner = 1
         self.CustomizeTab = 0

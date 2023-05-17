@@ -165,7 +165,7 @@ local function enterfolder(self, scroll, slottbl, fname)
 
         local count = recursivefoldercount(children)
 
-        if count > 99 then count = "99+" end
+        -- if count > 99 then count = "99+" end
 
         if count == 0 then continue end
 
@@ -529,7 +529,7 @@ function SWEP:CreateHUD_AttInfo()
         mode_toggle.DoClick = function(self2)
             -- surface.PlaySound(clicksound)
             -- self:PlayAnimation("toggle")
-            self:EmitSound(self:RandomChoice(self:GetProcessedValue("ToggleAttSound")), 75, 100, 1, CHAN_ITEM)
+            self:EmitSound(self:RandomChoice(self:GetProcessedValue("ToggleAttSound", true)), 75, 100, 1, CHAN_ITEM)
             self:ToggleStat(self2.addr)
             self:PostModify()
         end
@@ -537,7 +537,7 @@ function SWEP:CreateHUD_AttInfo()
         mode_toggle.DoRightClick = function(self2)
             -- surface.PlaySound(clicksound)
             -- self:PlayAnimation("toggle")
-            self:EmitSound(self:RandomChoice(self:GetProcessedValue("ToggleAttSound")), 75, 100, 1, CHAN_ITEM)
+            self:EmitSound(self:RandomChoice(self:GetProcessedValue("ToggleAttSound", true)), 75, 100, 1, CHAN_ITEM)
             self:ToggleStat(self2.addr, -1)
             self:PostModify()
         end

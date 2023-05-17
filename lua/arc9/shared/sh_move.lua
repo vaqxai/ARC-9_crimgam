@@ -9,7 +9,7 @@ function ARC9.Move(ply, mv, cmd)
     local basespd = (Vector(cmd:GetForwardMove(), cmd:GetUpMove(), cmd:GetSideMove())):Length()
     basespd = math.min(basespd, mv:GetMaxClientSpeed())
 
-    local mult = wpn:GetProcessedValue("Speed", 1)
+    local mult = wpn:GetProcessedValue("Speed", nil, 1)
 
     if wpn:GetSightAmount() > 0 then
         if ply:KeyDown(IN_SPEED) then
@@ -49,7 +49,7 @@ function ARC9.Move(ply, mv, cmd)
 
     if cmd:GetImpulse() == ARC9.IMPULSE_TOGGLEATTS then
         if !wpn:StillWaiting() and !wpn:GetUBGL() then
-            ply:EmitSound(wpn:RandomChoice(wpn:GetProcessedValue("ToggleAttSound")), 75, 100, 1, CHAN_ITEM)
+            ply:EmitSound(wpn:RandomChoice(wpn:GetProcessedValue("ToggleAttSound", true)), 75, 100, 1, CHAN_ITEM)
             wpn:PlayAnimation("toggle")
         end
     end
@@ -65,6 +65,12 @@ ARC9.ClientRecoilUp = 0
 ARC9.ClientRecoilSide = 0
 
 ARC9.ClientRecoilProgress = 0
+
+local ARC9_cheapscopes = GetConVar("ARC9_cheapscopes")
+
+local function approxEqualsZero(a)
+    return math.abs(a) < 0.0001
+end
 
 function ARC9.StartCommand(ply, cmd)
     if !IsValid(ply) then return end
@@ -99,15 +105,14 @@ function ARC9.StartCommand(ply, cmd)
         end
     end
 
-    local isScope = wpn:GetSight() and wpn:GetSight().atttbl and wpn:GetSight().atttbl.RTScope
-    local cheap = CLIENT and isScope and GetConVar("ARC9_cheapscopes"):GetBool()
+    local isScope = wpn:IsUsingRTScope()
 
-    if wpn:GetSightAmount() > 0.5 and cheap then
+    if isScope then
         local swayspeed = 2
         local swayamt = wpn:GetFreeSwayAmount()
         local swayang = Angle(math.sin(CurTime() * 0.6 * swayspeed) + (math.cos(CurTime() * 2) * 0.5), math.sin(CurTime() * 0.4 * swayspeed) + (math.cos(CurTime() * 1.6) * 0.5), 0)
 
-        swayang = swayang * wpn:GetSightAmount() * swayamt
+        swayang = swayang * wpn:GetSightAmount() * swayamt * 0.2
 
         local eyeang = cmd:GetViewAngles()
 
@@ -117,7 +122,7 @@ function ARC9.StartCommand(ply, cmd)
         cmd:SetViewAngles(eyeang)
     end
 
-    if wpn:GetProcessedValue("NoSprintWhenLocked") and wpn:GetAnimLockTime() > CurTime() then
+    if wpn:GetProcessedValue("NoSprintWhenLocked", true) and wpn:GetAnimLockTime() > CurTime() then
         cmd:RemoveKey(IN_SPEED)
     end
 
@@ -135,14 +140,14 @@ function ARC9.StartCommand(ply, cmd)
 
         -- 0 can be negative or positive!!!!! Insane
 
-        if recrise.p == 0 then
+        if approxEqualsZero(recrise.p) then
         elseif recrise.p > 0 then
             recrise.p = math.Clamp(recrise.p, 0, recrise.p - diff.p)
         elseif recrise.p < 0 then
             recrise.p = math.Clamp(recrise.p, recrise.p - diff.p, 0)
         end
 
-        if recrise.y == 0 then
+        if approxEqualsZero(recrise.y) then
         elseif recrise.y > 0 then
             recrise.y = math.Clamp(recrise.y, 0, recrise.y - diff.y)
         elseif recrise.y < 0 then
@@ -215,7 +220,7 @@ function ARC9.StartCommand(ply, cmd)
 
     if cmd:GetImpulse() == 100 and wpn:CanToggleAllStatsOnF() and !wpn:GetCustomize() then
         if !wpn:GetReloading() and !wpn:GetUBGL() then
-            ply:EmitSound(wpn:RandomChoice(wpn:GetProcessedValue("ToggleAttSound")), 75, 100, 1, CHAN_ITEM)
+            ply:EmitSound(wpn:RandomChoice(wpn:GetProcessedValue("ToggleAttSound", true)), 75, 100, 1, CHAN_ITEM)
             if CLIENT then
                 wpn:ToggleAllStatsOnF()
             end

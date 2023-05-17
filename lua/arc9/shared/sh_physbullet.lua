@@ -69,7 +69,7 @@ end
 
 function ARC9:ShootPhysBullet(wep, pos, vel, tbl)
 
-    local physmdl = wep:GetProcessedValue("PhysBulletModel")
+    local physmdl = wep:GetProcessedValue("PhysBulletModel", true)
     local mdlindex = ARC9.PhysBulletModelsLookup[string.lower(physmdl or "")] or 0
 
     if physmdl and mdlindex == 0 then
@@ -273,6 +273,7 @@ end
 local bulletGravity = GetConVar("ARC9_bullet_gravity")
 local bulletDrag = GetConVar("ARC9_bullet_drag")
 local bulletImaginary = GetConVar("ARC9_bullet_imaginary")
+local bulletLifetime = GetConVar("ARC9_bullet_lifetime")
 local traceResultTab = {}
 local traceTab = {
     output = traceResultTab
@@ -422,7 +423,7 @@ function ARC9:ProgressPhysBullet(bullet, timestep)
                     attacker:FireBullets(fireBullets)
                 end
                 if IsValid(bullet.ClientModel) then
-                    local t = weapon:GetProcessedValue("PhysBulletModelStick") or 0
+                    local t = weapon:GetProcessedValue("PhysBulletModelStick", true) or 0
                     if t > 0 then
                         local entity = tr.Entity
 
@@ -579,7 +580,7 @@ function ARC9:ProgressPhysBullet(bullet, timestep)
         bullet.Dead = true
     end
 
-    if bullet.StartTime <= (CurTime() - GetConVar("ARC9_bullet_lifetime"):GetFloat()) then
+    if bullet.StartTime <= (CurTime() - bulletLifetime:GetFloat()) then
         bullet.Dead = true
     elseif !indim(bullet.Pos, MaxDimensions) then
         bullet.Dead = true

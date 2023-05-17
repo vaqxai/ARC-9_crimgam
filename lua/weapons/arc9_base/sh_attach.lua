@@ -100,6 +100,11 @@ function SWEP:PostModify(toggleonly)
         self.PrintName = base.PrintName
         self.PrintName = self:GetValue("PrintName")
     end
+    
+    if !self.PrintName then
+        self.PrintName = base.PrintName
+        self.PrintName = self:GetValue("PrintName")
+    end
 
     self.PrintName = self:RunHook("HookP_NameChange", self.PrintName)
     self.Description = self:RunHook("HookP_DescriptionChange", self.Description)
@@ -187,7 +192,9 @@ function SWEP:PostModify(toggleonly)
 end
 
 function SWEP:ThinkCustomize()
-    if self:GetOwner():KeyPressed(ARC9.IN_CUSTOMIZE) and !self:GetOwner():KeyDown(IN_USE) then
+    local owner = self:GetOwner()
+
+    if owner:KeyPressed(ARC9.IN_CUSTOMIZE) and !owner:KeyDown(IN_USE) then
         self:ToggleCustomize(!self:GetCustomize())
     end
 end
@@ -248,8 +255,10 @@ function SWEP:GetAttBlocked(atttbl)
     return false
 end
 
+local arc9_atts_anarchy = GetConVar("arc9_atts_anarchy")
+
 function SWEP:SlotInvalid(slottbl)
-    if GetConVar("arc9_atts_anarchy"):GetBool() then return false end
+    if arc9_atts_anarchy:GetBool() then return false end
 
     local eles = self:GetElements()
 
@@ -484,11 +493,13 @@ function SWEP:GetSlotMissingDependents(addr, att, slottbl)
     return self.DependentCache[addr][att][2]
 end
 
+local arc9_atts_nocustomize = GetConVar("arc9_atts_nocustomize")
+
 function SWEP:CanAttach(addr, att, slottbl, ignorecount)
     if ARC9.Blacklist[att] then return false end
 
-    if GetConVar("arc9_atts_anarchy"):GetBool() then return true end
-    if GetConVar("arc9_atts_nocustomize"):GetBool() then return false end
+    if arc9_atts_anarchy:GetBool() then return true end
+    if arc9_atts_nocustomize:GetBool() then return false end
 
     local atttbl = ARC9.GetAttTable(att)
     local invatt = atttbl.InvAtt or att
@@ -552,7 +563,7 @@ function SWEP:CanAttach(addr, att, slottbl, ignorecount)
 end
 
 function SWEP:CanDetach(addr)
-    if GetConVar("arc9_atts_nocustomize"):GetBool() then return false end
+    if arc9_atts_nocustomize:GetBool() then return false end
 
     local slottbl = self:LocateSlotFromAddress(addr)
 
